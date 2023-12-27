@@ -106,6 +106,8 @@
       'libwebrtc/api/video/hdr_metadata.cc',
       'libwebrtc/api/video/video_content_type.cc',
       'libwebrtc/api/video/video_timing.cc',
+      'libwebrtc/common_video/generic_frame_descriptor/generic_frame_info.cc',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_extension.cc',
       # C++ include files.
       'libwebrtc/system_wrappers/source/field_trial.h',
       'libwebrtc/rtc_base/rate_statistics.h',
@@ -145,6 +147,11 @@
       'libwebrtc/modules/include/module_fec_types.h',
       'libwebrtc/api/video/video_frame_type.h',
       'libwebrtc/api/video/video_codec_type.h',
+      'libwebrtc/api/video/video_codec_constants.h',
+      'libwebrtc/common_video/generic_frame_descriptor/generic_frame_info.h',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_extension.h',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_reader.h',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_writer.h',
       #lym end red
       'libwebrtc/modules/pacing/interval_budget.h',
       'libwebrtc/modules/pacing/paced_sender.h',
