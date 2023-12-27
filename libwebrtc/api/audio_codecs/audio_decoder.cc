@@ -18,7 +18,7 @@
 #include "api/array_view.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/sanitizer.h"
-#include "rtc_base/trace_event.h"
+// #include "rtc_base/trace_event.h"
 
 namespace webrtc {
 

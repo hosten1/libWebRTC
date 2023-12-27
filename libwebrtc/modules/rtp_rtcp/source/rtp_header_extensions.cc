@@ -11,6 +11,7 @@
 #include "modules/rtp_rtcp/source/rtp_header_extensions.h"
 
 #include <string.h>
+
 #include <cmath>
 #include <limits>
 
@@ -20,8 +21,6 @@
 #include "modules/video_coding/codecs/interface/common_constants.h"
 #include "rtc_base/checks.h"
 
-//增加
-//#include "rtc_base/logging.h"
 namespace webrtc {
 // Absolute send time in RTP streams.
 //
@@ -55,6 +54,89 @@ bool AbsoluteSendTime::Write(rtc::ArrayView<uint8_t> data,
   RTC_DCHECK_EQ(data.size(), 3);
   RTC_DCHECK_LE(time_24bits, 0x00FFFFFF);
   ByteWriter<uint32_t, 3>::WriteBigEndian(data.data(), time_24bits);
+  return true;
+}
+
+// Absolute Capture Time
+//
+// The Absolute Capture Time extension is used to stamp RTP packets with a NTP
+// timestamp showing when the first audio or video frame in a packet was
+// originally captured. The intent of this extension is to provide a way to
+// accomplish audio-to-video synchronization when RTCP-terminating intermediate
+// systems (e.g. mixers) are involved.
+//
+// Data layout of the shortened version of abs-capture-time:
+//
+//    0                   1                   2                   3
+//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |  ID   | len=7 |     absolute capture timestamp (bit 0-23)     |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |             absolute capture timestamp (bit 24-55)            |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |  ... (56-63)  |
+//   +-+-+-+-+-+-+-+-+
+//
+// Data layout of the extended version of abs-capture-time:
+//
+//    0                   1                   2                   3
+//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |  ID   | len=15|     absolute capture timestamp (bit 0-23)     |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |             absolute capture timestamp (bit 24-55)            |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |  ... (56-63)  |   estimated capture clock offset (bit 0-23)   |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |           estimated capture clock offset (bit 24-55)          |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |  ... (56-63)  |
+//   +-+-+-+-+-+-+-+-+
+constexpr RTPExtensionType AbsoluteCaptureTimeExtension::kId;
+constexpr uint8_t AbsoluteCaptureTimeExtension::kValueSizeBytes;
+constexpr uint8_t AbsoluteCaptureTimeExtension::
+    kValueSizeBytesWithoutEstimatedCaptureClockOffset;
+constexpr const char AbsoluteCaptureTimeExtension::kUri[];
+
+bool AbsoluteCaptureTimeExtension::Parse(rtc::ArrayView<const uint8_t> data,
+                                         AbsoluteCaptureTime* extension) {
+  if (data.size() != kValueSizeBytes &&
+      data.size() != kValueSizeBytesWithoutEstimatedCaptureClockOffset) {
+    return false;
+  }
+
+  extension->absolute_capture_timestamp =
+      ByteReader<uint64_t>::ReadBigEndian(data.data());
+
+  if (data.size() != kValueSizeBytesWithoutEstimatedCaptureClockOffset) {
+    extension->estimated_capture_clock_offset =
+        ByteReader<int64_t>::ReadBigEndian(data.data() + 8);
+  }
+
+  return true;
+}
+
+size_t AbsoluteCaptureTimeExtension::ValueSize(
+    const AbsoluteCaptureTime& extension) {
+  if (extension.estimated_capture_clock_offset != absl::nullopt) {
+    return kValueSizeBytes;
+  } else {
+    return kValueSizeBytesWithoutEstimatedCaptureClockOffset;
+  }
+}
+
+bool AbsoluteCaptureTimeExtension::Write(rtc::ArrayView<uint8_t> data,
+                                         const AbsoluteCaptureTime& extension) {
+  RTC_DCHECK_EQ(data.size(), ValueSize(extension));
+
+  ByteWriter<uint64_t>::WriteBigEndian(data.data(),
+                                       extension.absolute_capture_timestamp);
+
+  if (data.size() != kValueSizeBytesWithoutEstimatedCaptureClockOffset) {
+    ByteWriter<int64_t>::WriteBigEndian(
+        data.data() + 8, extension.estimated_capture_clock_offset.value());
+  }
+
   return true;
 }
 
@@ -181,14 +263,14 @@ constexpr uint16_t TransportSequenceNumberV2::kIncludeTimestampsBit;
 bool TransportSequenceNumberV2::Parse(
     rtc::ArrayView<const uint8_t> data,
     uint16_t* transport_sequence_number,
-                                      FeedbackRequest* feedback_request) {
+    absl::optional<FeedbackRequest>* feedback_request) {
   if (data.size() != kValueSizeBytes &&
       data.size() != kValueSizeBytesWithoutFeedbackRequest)
     return false;
 
   *transport_sequence_number = ByteReader<uint16_t>::ReadBigEndian(data.data());
 
-//  *feedback_request = absl::nullopt;
+  *feedback_request = absl::nullopt;
   if (data.size() == kValueSizeBytes) {
     uint16_t feedback_request_raw =
         ByteReader<uint16_t>::ReadBigEndian(data.data() + 2);
@@ -207,18 +289,18 @@ bool TransportSequenceNumberV2::Parse(
 bool TransportSequenceNumberV2::Write(
     rtc::ArrayView<uint8_t> data,
     uint16_t transport_sequence_number,
-    const FeedbackRequest& feedback_request) {
+    const absl::optional<FeedbackRequest>& feedback_request) {
   RTC_DCHECK_EQ(data.size(),
                 ValueSize(transport_sequence_number, feedback_request));
 
   ByteWriter<uint16_t>::WriteBigEndian(data.data(), transport_sequence_number);
 
-  if (feedback_request.sequence_count != 0) {
-    RTC_DCHECK_GE(feedback_request.sequence_count, 0);
-    RTC_DCHECK_LT(feedback_request.sequence_count, kIncludeTimestampsBit);
+  if (feedback_request) {
+    RTC_DCHECK_GE(feedback_request->sequence_count, 0);
+    RTC_DCHECK_LT(feedback_request->sequence_count, kIncludeTimestampsBit);
     uint16_t feedback_request_raw =
-        feedback_request.sequence_count |
-        (feedback_request.include_timestamps ? kIncludeTimestampsBit : 0);
+        feedback_request->sequence_count |
+        (feedback_request->include_timestamps ? kIncludeTimestampsBit : 0);
     ByteWriter<uint16_t>::WriteBigEndian(data.data() + 2, feedback_request_raw);
   }
   return true;
@@ -241,7 +323,6 @@ constexpr const char VideoOrientation::kUri[];
 
 bool VideoOrientation::Parse(rtc::ArrayView<const uint8_t> data,
                              VideoRotation* rotation) {
-//   RTC_LOG(LS_INFO) << "hosten VideoOrientation::Parse（）---->解析RTP包header<----";
   if (data.size() != 1)
     return false;
   *rotation = ConvertCVOByteToVideoRotation(data[0]);

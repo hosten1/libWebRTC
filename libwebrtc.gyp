@@ -69,6 +69,7 @@
       'libwebrtc/rtc_base/synchronization/rw_lock_posix.cc',
       # 'libwebrtc/rtc_base/synchronization/rw_lock_win.cc',
       'libwebrtc/api/video/color_space.cc',
+      'libwebrtc/api/audio_codecs/audio_format.cc',
       # red sorce end
       'libwebrtc/rtc_base/bit_buffer.cc',
       'libwebrtc/rtc_base/byte_buffer.cc',
@@ -254,6 +255,7 @@
       'libwebrtc/rtc_base/synchronization/rw_lock_posix.h',
       # 'libwebrtc/rtc_base/synchronization/rw_lock_win.h',
       'libwebrtc/api/video/color_space.h',
+      'libwebrtc/api/audio_codecs/audio_format.h',
       # lym end red
       'libwebrtc/api/array_view.h',
       'libwebrtc/api/media_types.h',
