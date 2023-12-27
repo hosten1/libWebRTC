@@ -13,10 +13,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <memory>
 #include <vector>
 
-//#include "absl/types/optional.h"
+#include <absl/types/optional.h>
 #include "api/array_view.h"
 #include "rtc_base/buffer.h"
 #include "rtc_base/constructor_magic.h"
@@ -58,10 +59,8 @@ class AudioDecoder {
     // total number of samples across all channels, as well as whether the
     // decoder produced comfort noise or speech. On failure, returns an empty
     // absl::optional. Decode may be called at most once per frame object.
-//    virtual absl::optional<DecodeResult> Decode(
-//        rtc::ArrayView<int16_t> decoded) const = 0;
-//      virtual DecodeResult Decode(
-//          rtc::ArrayView<int16_t> decoded) const = 0;
+    virtual absl::optional<DecodeResult> Decode(
+        rtc::ArrayView<int16_t> decoded) const = 0;
   };
 
   struct ParseResult {
@@ -143,13 +142,6 @@ class AudioDecoder {
 
   // Resets the decoder state (empty buffers etc.).
   virtual void Reset() = 0;
-
-  // Notifies the decoder of an incoming packet to NetEQ.
-  virtual int IncomingPacket(const uint8_t* payload,
-                             size_t payload_len,
-                             uint16_t rtp_sequence_number,
-                             uint32_t rtp_timestamp,
-                             uint32_t arrival_timestamp);
 
   // Returns the last error code from the decoder.
   virtual int ErrorCode();
