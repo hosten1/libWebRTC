@@ -60,6 +60,7 @@
       'libwebrtc/modules/congestion_controller/rtp/send_time_history.cc',
       'libwebrtc/modules/congestion_controller/rtp/transport_feedback_adapter.cc',
       'libwebrtc/modules/congestion_controller/rtp/control_handler.cc',
+      'libwebrtc/modules/include/module_common_types.cc',
       # red source file
       'libwebrtc/system_wrappers/source/sleep.cc',
       'libwebrtc/rtc_base/bit_buffer.cc',
@@ -141,6 +142,13 @@
       'libwebrtc/api/units/timestamp.h',
       'libwebrtc/api/network_state_predictor.h',
       'libwebrtc/modules/include/module_common_types_public.h',
+      # lym 
+      'libwebrtc/modules/include/module.h',
+      'libwebrtc/modules/include/module_common_types.h',
+      'libwebrtc/modules/include/module_fec_types.h',
+      'libwebrtc/api/video/video_frame_type.h',
+      'libwebrtc/api/video/video_codec_type.h',
+      #lym end red
       'libwebrtc/modules/pacing/interval_budget.h',
       'libwebrtc/modules/pacing/paced_sender.h',
       'libwebrtc/modules/pacing/packet_router.h',
@@ -240,6 +248,11 @@
       'libwebrtc/modules/rtp_rtcp/source/rtp_video_header.h',
       'libwebrtc/modules/rtp_rtcp/source/time_util.h',
       'libwebrtc/modules/video_coding/codecs/interface/common_constants.h',
+      # lym
+      'libwebrtc/modules/video_coding/codecs/h264/include/h264_globals.h',
+      'libwebrtc/modules/video_coding/codecs/vp8/include/vp8_globals.h',
+      'libwebrtc/modules/video_coding/codecs/vp9/include/vp9_globals.h',
+      # lym end red
       'libwebrtc/api/array_view.h',
       'libwebrtc/api/media_types.h',
       'libwebrtc/api/rtp_headers.h',
