@@ -15,6 +15,8 @@
 #include <list>
 #include <vector>
 
+#include "RTC/RTCP/FeedbackRtpTransport.hpp"
+
 #include <absl/strings/string_view.h>
 #include <absl/types/optional.h>
 #include <absl/types/variant.h>
@@ -24,6 +26,8 @@
 #include "api/transport/network_types.h"
 #include "modules/include/module_common_types.h"
 #include "system_wrappers/include/clock.h"
+
+
 
 #define RTCP_CNAME_SIZE 256  // RFC 3550 page 44, including null termination
 #define IP_PACKET_SIZE 1500  // we assume ethernet
@@ -306,6 +310,12 @@ struct RtpPacketSendInfo {
   PacedPacketInfo pacing_info;
 };
 
+class NetworkStateEstimateObserver {
+ public:
+  virtual void OnRemoteNetworkEstimate(NetworkStateEstimate estimate) = 0;
+  virtual ~NetworkStateEstimateObserver() = default;
+};
+
 class TransportFeedbackObserver {
  public:
   TransportFeedbackObserver() {}
@@ -313,6 +323,8 @@ class TransportFeedbackObserver {
 
   virtual void OnAddPacket(const RtpPacketSendInfo& packet_info) = 0;
   virtual void OnTransportFeedback(const rtcp::TransportFeedback& feedback) = 0;
+  virtual void OnTransportFeedback(const RTC::RTCP::FeedbackRtpTransportPacket& feedback) = 0;
+
 };
 
 // Interface for PacketRouter to send rtcp feedback on behalf of

@@ -2,6 +2,7 @@
   'target_defaults': {
     'dependencies':
     [
+      '../jsoncpp/jsoncpp.gyp:jsoncpp',
       'deps/abseil-cpp/abseil-cpp.gyp:abseil',
       '../libuv/uv.gyp:libuv',
       '../openssl/openssl.gyp:openssl'
@@ -63,6 +64,11 @@
       'libwebrtc/modules/include/module_common_types.cc',
       # red source file
       'libwebrtc/system_wrappers/source/sleep.cc',
+      'libwebrtc/system_wrappers/source/clock.cc',
+      'libwebrtc/rtc_base/synchronization/rw_lock_wrapper.cc',
+      'libwebrtc/rtc_base/synchronization/rw_lock_posix.cc',
+      'libwebrtc/rtc_base/synchronization/rw_lock_win.cc',
+      # red sorce end
       'libwebrtc/rtc_base/bit_buffer.cc',
       'libwebrtc/rtc_base/byte_buffer.cc',
       'libwebrtc/rtc_base/checks.cc',
@@ -90,22 +96,11 @@
       'libwebrtc/modules/rtp_rtcp/source/rtp_packet_received.cc',
       'libwebrtc/modules/rtp_rtcp/source/rtp_packet.cc',
       'libwebrtc/modules/rtp_rtcp/source/time_util.cc',
-      # 重复
-      # 'libwebrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.cc',
       'libwebrtc/api/media_types.cc',
       'libwebrtc/api/rtp_headers.cc',
       'libwebrtc/api/rtp_parameters.cc',
       'libwebrtc/api/audio_codecs/audio_decoder.cc',
-       # 重复
-      # 'libwebrtc/api/transport/network_types.cc',
-      # 'libwebrtc/api/units/data_rate.cc',
-      # 重复
-      # 'libwebrtc/api/units/data_size.cc',
-         # 重复
-      # 'libwebrtc/api/units/time_delta.cc',
-      # 重复
-      # 'libwebrtc/api/units/timestamp.cc',
-      # 'libwebrtc/api/video/color_space.cc',
+   
       'libwebrtc/api/video/hdr_metadata.cc',
       'libwebrtc/api/video/video_content_type.cc',
       'libwebrtc/api/video/video_timing.cc',
@@ -253,6 +248,10 @@
       'libwebrtc/modules/video_coding/codecs/vp8/include/vp8_globals.h',
       'libwebrtc/modules/video_coding/codecs/vp9/include/vp9_globals.h',
       'libwebrtc/rtc_base/thread_annotations.h',
+      'libwebrtc/system_wrappers/include/clock.h',
+      'libwebrtc/rtc_base/synchronization/rw_lock_wrapper.h',
+      'libwebrtc/rtc_base/synchronization/rw_lock_posix.h',
+      'libwebrtc/rtc_base/synchronization/rw_lock_win.h',
       # lym end red
       'libwebrtc/api/array_view.h',
       'libwebrtc/api/media_types.h',
@@ -261,14 +260,7 @@
       'libwebrtc/api/scoped_refptr.h',
       'libwebrtc/api/audio_codecs/audio_decoder.h',
       'libwebrtc/api/transport/network_types.h',
-      # 重复
-      # 'libwebrtc/api/units/data_rate.h',
-      # 'libwebrtc/api/units/data_size.h',
-      # 重复
-      # 'libwebrtc/api/units/time_delta.h',
-      # 重复
-      # 'libwebrtc/api/units/timestamp.h',
-      # 'libwebrtc/api/video/color_space.h',
+
       'libwebrtc/api/video/hdr_metadata.h',
       'libwebrtc/api/video/video_content_type.h',
       'libwebrtc/api/video/video_timing.h',
