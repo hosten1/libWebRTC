@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-//#include "absl/types/optional.h"
+#include <absl/types/optional.h>
 #include "api/video/hdr_metadata.h"
 
 namespace webrtc {
@@ -170,8 +170,7 @@ class ColorSpace {
   RangeID range_ = RangeID::kInvalid;
   ChromaSiting chroma_siting_horizontal_ = ChromaSiting::kUnspecified;
   ChromaSiting chroma_siting_vertical_ = ChromaSiting::kUnspecified;
-//  absl::optional<HdrMetadata> hdr_metadata_;
-  HdrMetadata hdr_metadata_;
+  absl::optional<HdrMetadata> hdr_metadata_;
 };
 
 }  // namespace webrtc

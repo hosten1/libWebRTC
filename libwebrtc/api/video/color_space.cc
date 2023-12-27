@@ -10,9 +10,6 @@
 
 #include "api/video/color_space.h"
 
-#include <stdint.h>
-#include <cstddef>
-
 namespace webrtc {
 namespace {
 // Try to convert |enum_value| into the enum class T. |enum_bitmask| is created
@@ -36,12 +33,12 @@ int EnumMustBeLessThan64() {
 }
 
 template <typename T, size_t N>
-constexpr uint64_t MakeMask(const int index, const int length, T (&values)[N]) {
+constexpr int MakeMask(const int index, const int length, T (&values)[N]) {
   return length > 1
              ? (MakeMask(index, 1, values) +
                 MakeMask(index + 1, length - 1, values))
              : (static_cast<uint8_t>(values[index]) < 64
-                    ? (uint64_t{1} << static_cast<uint64_t>(values[index]))
+                    ? (uint64_t{1} << static_cast<uint8_t>(values[index]))
                     : EnumMustBeLessThan64());
 }
 
@@ -96,7 +93,8 @@ ColorSpace::ColorSpace(PrimaryID primaries,
       range_(range),
       chroma_siting_horizontal_(chroma_siting_horz),
       chroma_siting_vertical_(chroma_siting_vert),
-      hdr_metadata_(*hdr_metadata) {}
+      hdr_metadata_(hdr_metadata ? absl::make_optional(*hdr_metadata)
+                                 : absl::nullopt) {}
 
 ColorSpace::PrimaryID ColorSpace::primaries() const {
   return primaries_;
@@ -123,8 +121,7 @@ ColorSpace::ChromaSiting ColorSpace::chroma_siting_vertical() const {
 }
 
 const HdrMetadata* ColorSpace::hdr_metadata() const {
-//  return hdr_metadata_ ? &*hdr_metadata_ : nullptr;
-    return &hdr_metadata_;
+  return hdr_metadata_ ? &*hdr_metadata_ : nullptr;
 }
 
 bool ColorSpace::set_primaries_from_uint8(uint8_t enum_value) {
@@ -183,9 +180,8 @@ bool ColorSpace::set_chroma_siting_vertical_from_uint8(uint8_t enum_value) {
 }
 
 void ColorSpace::set_hdr_metadata(const HdrMetadata* hdr_metadata) {
-//  hdr_metadata_ =
-//      hdr_metadata ? absl::make_optional(*hdr_metadata) : absl::nullopt;
-    hdr_metadata_ = *hdr_metadata;
+  hdr_metadata_ =
+      hdr_metadata ? absl::make_optional(*hdr_metadata) : absl::nullopt;
 }
 
 }  // namespace webrtc
