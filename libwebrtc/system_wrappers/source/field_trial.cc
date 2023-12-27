@@ -12,8 +12,8 @@
 
 #include "system_wrappers/source/field_trial.h"
 
-#include "Logger.hpp"
-
+// #include "Logger.hpp"
+ #include "rtc_base/checks.h"
 #include <absl/strings/string_view.h>
 #include <stddef.h>
 #include <map>
@@ -105,13 +105,14 @@ std::string FindFullName(const std::string& name) {
 
 // Optionally initialize field trial from a string.
 void InitFieldTrialsFromString(const char* trials_string) {
-  MS_DEBUG_TAG(bwe, "Setting field trial string: %s", trials_string);
+  // lym
+  // MS_DEBUG_TAG(bwe, "Setting field trial string: %s", trials_string);
 #ifndef WEBRTC_EXCLUDE_FIELD_TRIAL_DEFAULT
   if (trials_string) {
-    // RTC_DCHECK(FieldTrialsStringIsValid(trials_string))
-        // << "Invalid field trials string:" << trials_string;
-    MS_ASSERT(
-      FieldTrialsStringIsValid(trials_string), "invalid field trials string: '%s'", trials_string);
+    RTC_DCHECK(FieldTrialsStringIsValid(trials_string))
+        << "Invalid field trials string:" << trials_string;
+    // MS_ASSERT(
+    //   FieldTrialsStringIsValid(trials_string), "invalid field trials string: '%s'", trials_string);
   };
 #endif  // WEBRTC_EXCLUDE_FIELD_TRIAL_DEFAULT
   trials_init_string = trials_string;
