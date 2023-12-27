@@ -252,6 +252,7 @@
       'libwebrtc/modules/video_coding/codecs/h264/include/h264_globals.h',
       'libwebrtc/modules/video_coding/codecs/vp8/include/vp8_globals.h',
       'libwebrtc/modules/video_coding/codecs/vp9/include/vp9_globals.h',
+      'libwebrtc/rtc_base/thread_annotations.h',
       # lym end red
       'libwebrtc/api/array_view.h',
       'libwebrtc/api/media_types.h',
