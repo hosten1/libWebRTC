@@ -67,7 +67,7 @@
       'libwebrtc/system_wrappers/source/clock.cc',
       'libwebrtc/rtc_base/synchronization/rw_lock_wrapper.cc',
       'libwebrtc/rtc_base/synchronization/rw_lock_posix.cc',
-      'libwebrtc/rtc_base/synchronization/rw_lock_win.cc',
+      # 'libwebrtc/rtc_base/synchronization/rw_lock_win.cc',
       # red sorce end
       'libwebrtc/rtc_base/bit_buffer.cc',
       'libwebrtc/rtc_base/byte_buffer.cc',
@@ -251,7 +251,7 @@
       'libwebrtc/system_wrappers/include/clock.h',
       'libwebrtc/rtc_base/synchronization/rw_lock_wrapper.h',
       'libwebrtc/rtc_base/synchronization/rw_lock_posix.h',
-      'libwebrtc/rtc_base/synchronization/rw_lock_win.h',
+      # 'libwebrtc/rtc_base/synchronization/rw_lock_win.h',
       # lym end red
       'libwebrtc/api/array_view.h',
       'libwebrtc/api/media_types.h',
@@ -283,7 +283,28 @@
           # Define Little Endian.
           'defines': [ 'MS_LITTLE_ENDIAN' ]
       }],
-
+      ['OS != "win"', {
+        'defines': [
+          'WEBRTC_POSIX',
+        ],
+      }],
+      [ 'OS == "mac"', {
+        'defines': [
+          'WEBRTC_MAC',
+        ],
+      }],
+      [
+        'OS == "linux"', {
+            'defines': [
+                'WEBRTC_LINUX',
+            ],
+        },
+      ],
+     ['OS =="win"', {
+        'defines': [
+          'WEBRTC_WIN',
+        ],
+      }],
       # Platform-specifics.
 
       [ 'OS != "win"', {

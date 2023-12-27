@@ -22,9 +22,9 @@ const int16_t kNoPictureId = -1;
 const int16_t kNoTl0PicIdx = -1;
 const uint8_t kNoTemporalIdx = 0xFF;
 const int kNoKeyIdx = -1;
-// 原来在vp9_globals
+//// 原来在vp9_globals
 const uint8_t kNoSpatialIdx = 0xFF;
-const uint8_t kNoGofIdx = 0xFF;
+//const uint8_t kNoGofIdx = 0xFF;
 
 }  // namespace webrtc
 

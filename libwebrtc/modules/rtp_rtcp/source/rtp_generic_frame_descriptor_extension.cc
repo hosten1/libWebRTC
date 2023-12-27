@@ -146,8 +146,8 @@ bool RtpGenericFrameDescriptorExtensionWrite(
     base_header |= kFlagFirstSubframeV00;
     base_header |= kFlagLastSubframeV00;
   } else if (version >= 1) {
-    const bool discardable = descriptor.Discardable();
-    base_header |= (discardable == false ? kFlagDiscardableV01 : 0);
+    const absl::optional<bool> discardable = descriptor.Discardable();
+    base_header |= (discardable.value_or(false) ? kFlagDiscardableV01 : 0);
   }
 
   if (!descriptor.FirstPacketInSubFrame()) {
