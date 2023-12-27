@@ -68,6 +68,7 @@
       'libwebrtc/rtc_base/synchronization/rw_lock_wrapper.cc',
       'libwebrtc/rtc_base/synchronization/rw_lock_posix.cc',
       # 'libwebrtc/rtc_base/synchronization/rw_lock_win.cc',
+      'libwebrtc/api/video/color_space.cc',
       # red sorce end
       'libwebrtc/rtc_base/bit_buffer.cc',
       'libwebrtc/rtc_base/byte_buffer.cc',
@@ -252,6 +253,7 @@
       'libwebrtc/rtc_base/synchronization/rw_lock_wrapper.h',
       'libwebrtc/rtc_base/synchronization/rw_lock_posix.h',
       # 'libwebrtc/rtc_base/synchronization/rw_lock_win.h',
+      'libwebrtc/api/video/color_space.h',
       # lym end red
       'libwebrtc/api/array_view.h',
       'libwebrtc/api/media_types.h',
