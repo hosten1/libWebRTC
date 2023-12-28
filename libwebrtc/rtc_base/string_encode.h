@@ -12,13 +12,14 @@
 #define RTC_BASE_STRING_ENCODE_H_
 
 #include <stddef.h>
+
 #include <string>
 #include <type_traits>
 #include <vector>
 
-//#include "absl/types/optional.h"
-#include "checks.h"
-// #include "string_to_number.h"
+#include "absl/types/optional.h"
+#include "rtc_base/checks.h"
+#include "rtc_base/string_to_number.h"
 
 namespace rtc {
 
@@ -127,15 +128,15 @@ template <typename T,
           typename std::enable_if<std::is_arithmetic<T>::value &&
                                       !std::is_same<T, bool>::value,
                                   int>::type = 0>
-// static bool FromString(const std::string& s, T* t) {
-//   RTC_DCHECK(t);
-//     T result = StringToNumber<T>(s);
+static bool FromString(const std::string& s, T* t) {
+  RTC_DCHECK(t);
+  absl::optional<T> result = StringToNumber<T>(s);
 
-//   if (result)
-//     *t = *result;
+  if (result)
+    *t = *result;
 
-//   return result.has_value();
-// }
+  return result.has_value();
+}
 
 bool FromString(const std::string& s, bool* b);
 

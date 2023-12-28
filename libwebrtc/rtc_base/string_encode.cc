@@ -8,13 +8,12 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "string_encode.h"
+#include "rtc_base/string_encode.h"
 
 #include <cstdio>
 
 #include "rtc_base/arraysize.h"
-#include "checks.h"
-
+#include "rtc_base/checks.h"
 
 namespace rtc {
 
