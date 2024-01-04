@@ -263,7 +263,6 @@
 		1B6775B62B468F800045883A /* rtp_packet_history.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775B42B468F7F0045883A /* rtp_packet_history.cc */; };
 		1B6775B72B468F800045883A /* rtp_packet_history.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775B52B468F7F0045883A /* rtp_packet_history.h */; };
 		1B6775BA2B4690050045883A /* rtp_packet_to_send.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775B82B4690050045883A /* rtp_packet_to_send.cc */; };
-		1B6775BB2B4690050045883A /* rtp_packet_to_send.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775B92B4690050045883A /* rtp_packet_to_send.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -530,7 +529,6 @@
 		1B6775B42B468F7F0045883A /* rtp_packet_history.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rtp_packet_history.cc; sourceTree = "<group>"; };
 		1B6775B52B468F7F0045883A /* rtp_packet_history.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rtp_packet_history.h; sourceTree = "<group>"; };
 		1B6775B82B4690050045883A /* rtp_packet_to_send.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rtp_packet_to_send.cc; sourceTree = "<group>"; };
-		1B6775B92B4690050045883A /* rtp_packet_to_send.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rtp_packet_to_send.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1471,7 +1469,6 @@
 				1B6775B42B468F7F0045883A /* rtp_packet_history.cc */,
 				1B6775B52B468F7F0045883A /* rtp_packet_history.h */,
 				1B6775B82B4690050045883A /* rtp_packet_to_send.cc */,
-				1B6775B92B4690050045883A /* rtp_packet_to_send.h */,
 				1B6774602B463CF60045883A /* rtp_packet_received.cc */,
 				1B67745A2B463CF60045883A /* rtp_packet_received.h */,
 				1B6774522B463CF60045883A /* rtp_packet.cc */,
@@ -1783,7 +1780,6 @@
 				1B6775622B463CF60045883A /* rtp_dependency_descriptor_extension.h in Headers */,
 				1B6774AC2B463CF60045883A /* ref_count.h in Headers */,
 				1B6774F42B463CF60045883A /* random.h in Headers */,
-				1B6775BB2B4690050045883A /* rtp_packet_to_send.h in Headers */,
 				1B6775882B463CF60045883A /* send_time_history.h in Headers */,
 				1B6774FF2B463CF60045883A /* video_rotation.h in Headers */,
 				1B6775B22B468AB60045883A /* critical_section.h in Headers */,

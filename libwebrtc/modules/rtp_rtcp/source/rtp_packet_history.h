@@ -16,23 +16,25 @@
 #include <set>
 #include <vector>
 #ifdef USE_MEDIASOUP_ClASS
-//#include <absl/types/optional.h>
-//#include "api/array_view.h"
-#else
 #include <absl/types/optional.h>
 #include "api/array_view.h"
-//#include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
+#include "RTC/RtpPacket.hpp"
+#else
+#include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #endif
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/critical_section.h"
 #include "rtc_base/thread_annotations.h"
 
 namespace webrtc {
-//#ifdef USE_MEDIASOUP_ClASS
-enum StorageType_ms { kDontRetransmit, kAllowRetransmission };
-//#endif
+#ifdef USE_MEDIASOUP_ClASS
+enum StorageType_ms { kDontRetransmit_ms, kAllowRetransmission_ms };
+#endif
 class Clock;
+#ifdef USE_MEDIASOUP_ClASS
+#else
 class RtpPacketToSend;
+#endif
 
 class RtpPacketHistory {
  public:
@@ -79,32 +81,61 @@ class RtpPacketHistory {
   // a packet in the history before we are reasonably sure it has been received.
   void SetRtt(int64_t rtt_ms);
 
+#ifdef USE_MEDIASOUP_ClASS
   // If |send_time| is set, packet was sent without using pacer, so state will
   // be set accordingly.
-  void PutRtpPacket(std::unique_ptr<RtpPacketToSend> packet,
+  void PutRtpPacket(std::unique_ptr<RTC::RtpPacket> packet,
                     StorageType_ms type,
                     absl::optional<int64_t> send_time_ms);
-
+#else
+    // If |send_time| is set, packet was sent without using pacer, so state will
+    // be set accordingly.
+    void PutRtpPacket(std::unique_ptr<RtpPacketToSend> packet,
+                      StorageType type,
+                      absl::optional<int64_t> send_time_ms);
+#endif
+    
+#ifdef USE_MEDIASOUP_ClASS
+    // Gets stored RTP packet corresponding to the input |sequence number|.
+    // Returns nullptr if packet is not found or was (re)sent too recently.
+    std::unique_ptr<RTC::RtpPacket> GetPacketAndSetSendTime(
+        uint16_t sequence_number);
+#else
   // Gets stored RTP packet corresponding to the input |sequence number|.
   // Returns nullptr if packet is not found or was (re)sent too recently.
   std::unique_ptr<RtpPacketToSend> GetPacketAndSetSendTime(
       uint16_t sequence_number);
-
+#endif
+    
   // Similar to GetPacketAndSetSendTime(), but only returns a snapshot of the
   // current state for packet, and never updates internal state.
   absl::optional<PacketState> GetPacketState(uint16_t sequence_number) const;
-
+    
+#ifdef USE_MEDIASOUP_ClASS
+    // Get the packet (if any) from the history, with size closest to
+    // |packet_size|. The exact size of the packet is not guaranteed.
+    std::unique_ptr<RTC::RtpPacket> GetBestFittingPacket(
+        size_t packet_size) const;
+#else
   // Get the packet (if any) from the history, with size closest to
   // |packet_size|. The exact size of the packet is not guaranteed.
   std::unique_ptr<RtpPacketToSend> GetBestFittingPacket(
       size_t packet_size) const;
-
+#endif
+    
+#ifdef USE_MEDIASOUP_ClASS
+    // Get the packet (if any) from the history, that is deemed most likely to
+    // the remote side. This is calculated from heuristics such as packet age
+    // and times retransmitted. Updated the send time of the packet, so is not
+    // a const method.
+    std::unique_ptr<RTC::RtpPacket> GetPayloadPaddingPacket();
+#else
   // Get the packet (if any) from the history, that is deemed most likely to
   // the remote side. This is calculated from heuristics such as packet age
   // and times retransmitted. Updated the send time of the packet, so is not
   // a const method.
   std::unique_ptr<RtpPacketToSend> GetPayloadPaddingPacket();
-
+#endif
   // Cull packets that have been acknowledged as received by the remote end.
   void CullAcknowledgedPackets(rtc::ArrayView<const uint16_t> sequence_numbers);
 
@@ -120,24 +151,39 @@ class RtpPacketHistory {
 
   class StoredPacket {
    public:
+#ifdef USE_MEDIASOUP_ClASS
+      StoredPacket(std::unique_ptr<RTC::RtpPacket> packet,
+                   StorageType_ms storage_type,
+                   absl::optional<int64_t> send_time_ms,
+                   uint64_t insert_order);
+#else
     StoredPacket(std::unique_ptr<RtpPacketToSend> packet,
-                 StorageType_ms storage_type,
+                 StorageType storage_type,
                  absl::optional<int64_t> send_time_ms,
                  uint64_t insert_order);
+#endif
     StoredPacket(StoredPacket&&);
     StoredPacket& operator=(StoredPacket&&);
     ~StoredPacket();
-
+#ifdef USE_MEDIASOUP_ClASS
     StorageType_ms storage_type() const { return storage_type_; }
+#else
+    StorageType storage_type() const { return storage_type_; }
+#endif
+   
     uint64_t insert_order() const { return insert_order_; }
     size_t times_retransmitted() const { return times_retransmitted_; }
     void IncrementTimesRetransmitted(PacketPrioritySet* priority_set);
 
     // The time of last transmission, including retransmissions.
     absl::optional<int64_t> send_time_ms_;
-
+#ifdef USE_MEDIASOUP_ClASS
+    // The actual packet.
+    std::unique_ptr<RTC::RtpPacket> packet_;
+#else
     // The actual packet.
     std::unique_ptr<RtpPacketToSend> packet_;
+#endif
 
     // True if the packet is currently in the pacer queue pending transmission.
     bool pending_transmission_;
@@ -145,7 +191,12 @@ class RtpPacketHistory {
    private:
     // Storing a packet with |storage_type| = kDontRetransmit indicates this is
     // only used as temporary storage until sent by the pacer sender.
+#ifdef USE_MEDIASOUP_ClASS
     StorageType_ms storage_type_;
+#else
+    StorageType storage_type_;
+#endif
+     
 
     // Unique number per StoredPacket, incremented by one for each added
     // packet. Used to sort on insert order.
@@ -166,10 +217,17 @@ class RtpPacketHistory {
       RTC_EXCLUSIVE_LOCKS_REQUIRED(lock_);
   void Reset() RTC_EXCLUSIVE_LOCKS_REQUIRED(lock_);
   void CullOldPackets(int64_t now_ms) RTC_EXCLUSIVE_LOCKS_REQUIRED(lock_);
+#ifdef USE_MEDIASOUP_ClASS
+    // Removes the packet from the history, and context/mapping that has been
+    // stored. Returns the RTP packet instance contained within the StoredPacket.
+    std::unique_ptr<RTC::RtpPacket> RemovePacket(StoredPacketIterator packet)
+        RTC_EXCLUSIVE_LOCKS_REQUIRED(lock_);
+#else
   // Removes the packet from the history, and context/mapping that has been
   // stored. Returns the RTP packet instance contained within the StoredPacket.
   std::unique_ptr<RtpPacketToSend> RemovePacket(StoredPacketIterator packet)
       RTC_EXCLUSIVE_LOCKS_REQUIRED(lock_);
+#endif
   static PacketState StoredPacketToPacketState(
       const StoredPacket& stored_packet);
 
