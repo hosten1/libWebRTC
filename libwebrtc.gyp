@@ -2,10 +2,7 @@
   'target_defaults': {
     'dependencies':
     [
-      '../jsoncpp/jsoncpp.gyp:jsoncpp',
-      'deps/abseil-cpp/abseil-cpp.gyp:abseil',
-      '../libuv/uv.gyp:libuv',
-      '../openssl/openssl.gyp:openssl'
+      # 'deps/abseil-cpp/abseil-cpp.gyp:abseil'
     ],
     'direct_dependent_settings': {
       'include_dirs':
@@ -334,7 +331,21 @@
   [
     {
       'target_name': 'libwebrtc',
-      'type': 'static_library'
+      'type': 'static_library',
+      'include_dirs': [   # 指定libmath.a头文件路径
+        'deps/jsoncpp/json',
+        'deps/libuv/include',
+        'deps/abseil-cpp/abseil-cpp',
+        'deps/openssl/openssl'         
+      ],
+      'libraries': [      # 指定链接的头文件路径和名称
+        'deps/jsoncpp/libjsoncpp.a',
+        'deps/libuv/libuv_a.a',
+        'deps/abseil-cpp/abseil.a',
+        'deps/openssl/libcrypto.a',
+        'deps/openssl/libssl.a'     
+      ]
     }
+    
   ]
 }
