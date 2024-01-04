@@ -7,19 +7,21 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::GoogCcNetworkController"
 // #define MS_LOG_DEV_LEVEL 3
-
+#else
+#endif
 #include "modules/congestion_controller/goog_cc/goog_cc_network_control.h"
 #include "api/units/time_delta.h"
 #include "modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.h"
 #include "modules/congestion_controller/goog_cc/alr_detector.h"
 #include "modules/congestion_controller/goog_cc/probe_controller.h"
 #include "modules/remote_bitrate_estimator/include/bwe_defines.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#else
+#endif
 #include <absl/memory/memory.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -215,7 +217,9 @@ NetworkControlUpdate GoogCcNetworkController::OnProcessInterval(
 NetworkControlUpdate GoogCcNetworkController::OnRemoteBitrateReport(
     RemoteBitrateReport msg) {
   if (packet_feedback_only_) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_ERROR("Received REMB for packet feedback only GoogCC");
+#endif
     return NetworkControlUpdate();
   }
   bandwidth_estimation_->UpdateReceiverEstimate(msg.receive_time,
@@ -335,15 +339,21 @@ void GoogCcNetworkController::ClampConstraints() {
   if (use_min_allocatable_as_lower_bound_)
     min_data_rate_ = std::max(min_data_rate_, min_total_allocated_bitrate_);
   if (max_data_rate_ < min_data_rate_) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_ERROR(
       "max bitrate smaller than min bitrate [max_data_rate_:%" PRIi64 ", min_data_rate_:%" PRIi64 "]",
       max_data_rate_.bps(), min_data_rate_.bps());
+#else
+#endif
     max_data_rate_ = min_data_rate_;
   }
   if (starting_rate_ && starting_rate_ < min_data_rate_) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_ERROR(
       "start bitrate smaller than min bitrate [starting_rate_:%" PRIi64 ", min_data_rate_:%" PRIi64 "]",
       starting_rate_->bps(), min_data_rate_.bps());
+#else
+#endif
     starting_rate_ = min_data_rate_;
   }
 }
@@ -355,10 +365,11 @@ std::vector<ProbeClusterConfig> GoogCcNetworkController::ResetConstraints(
       new_constraints.max_data_rate.value_or(DataRate::PlusInfinity());
   starting_rate_ = new_constraints.starting_rate;
   ClampConstraints();
-
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV(
     "calling bandwidth_estimation_->SetBitrates() [max_data_rate_.bps_or(-1):%" PRIi64 "]",
     max_data_rate_.bps_or(-1));
+#endif
 
   bandwidth_estimation_->SetBitrates(starting_rate_, min_data_rate_,
                                      max_data_rate_, new_constraints.at_time);
@@ -654,11 +665,13 @@ void GoogCcNetworkController::MaybeTriggerOnNetworkChanged(
     update->probe_cluster_configs.insert(update->probe_cluster_configs.end(),
                                          probes.begin(), probes.end());
     update->pacer_config = GetPacingRates(at_time);
-
+#ifdef USE_MEDIASOUP_ClASS
     MS_DEBUG_DEV("bwe [at_time:%" PRIu64", pushback_target_bps:%lld, estimate_bps:%lld]",
                  at_time.ms(),
                  last_pushback_target_rate_.bps(),
                  last_raw_target_rate_.bps());
+#else
+#endif
   }
 }
 

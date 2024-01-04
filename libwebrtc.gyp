@@ -68,6 +68,12 @@
       'libwebrtc/api/video/color_space.cc',
       'libwebrtc/api/audio_codecs/audio_format.cc',
       # red sorce end
+     # lym pacer
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet.cc',
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/common_header.cc',
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.ccc',
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.cc',
+      # lyn pacer end
       'libwebrtc/rtc_base/bit_buffer.cc',
       'libwebrtc/rtc_base/byte_buffer.cc',
       'libwebrtc/rtc_base/checks.cc',
@@ -137,6 +143,7 @@
       'libwebrtc/api/units/data_rate.h',
       'libwebrtc/api/units/timestamp.h',
       'libwebrtc/api/network_state_predictor.h',
+      'libwebrtc/api/function_view.h',
       'libwebrtc/modules/include/module_common_types_public.h',
       # lym 
       'libwebrtc/modules/include/module.h',
@@ -150,6 +157,12 @@
       'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_reader.h',
       'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_writer.h',
       #lym end red
+      # lym pacer
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet.h',
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/common_header.h',
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.h',
+     'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.h',
+      # lyn pacer end
       'libwebrtc/modules/pacing/interval_budget.h',
       'libwebrtc/modules/pacing/paced_sender.h',
       'libwebrtc/modules/pacing/packet_router.h',
@@ -162,7 +175,7 @@
       'libwebrtc/modules/remote_bitrate_estimator/remote_bitrate_estimator_abs_send_time.h',
       'libwebrtc/modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h',
       'libwebrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h',
-      'libwebrtc/modules/rtp_rtcp/source/rtp_packet/transport_feedback.h',
+     #'libwebrtc/modules/rtp_rtcp/source/rtp_packet/transport_feedback.h',
       'libwebrtc/modules/bitrate_controller/loss_based_bandwidth_estimation.h',
       'libwebrtc/modules/bitrate_controller/send_side_bandwidth_estimation.h',
       'libwebrtc/modules/congestion_controller/goog_cc/bitrate_estimator.h',
@@ -333,17 +346,10 @@
       'target_name': 'libwebrtc',
       'type': 'static_library',
       'include_dirs': [   # 指定libmath.a头文件路径
-        'deps/jsoncpp/json',
-        'deps/libuv/include',
-        'deps/abseil-cpp/abseil-cpp',
-        'deps/openssl/openssl'         
+        'deps/abseil-cpp/abseil-cpp'
       ],
       'libraries': [      # 指定链接的头文件路径和名称
-        'deps/jsoncpp/libjsoncpp.a',
-        'deps/libuv/libuv_a.a',
-        'deps/abseil-cpp/abseil.a',
-        'deps/openssl/libcrypto.a',
-        'deps/openssl/libssl.a'     
+        'deps/abseil-cpp/abseil.a'
       ]
     }
     

@@ -15,8 +15,11 @@
 #include <list>
 #include <vector>
 
+#ifdef USE_MEDIASOUP_ClASS
 #include "RTC/RTCP/FeedbackRtpTransport.hpp"
+#else
 
+#endif
 #include <absl/strings/string_view.h>
 #include <absl/types/optional.h>
 #include <absl/types/variant.h>
@@ -325,7 +328,9 @@ class TransportFeedbackObserver {
 
   virtual void OnAddPacket(const RtpPacketSendInfo& packet_info) = 0;
   virtual void OnTransportFeedback(const rtcp::TransportFeedback& feedback) = 0;
+#ifdef USE_MEDIASOUP_ClASS
   virtual void OnTransportFeedback(const RTC::RTCP::FeedbackRtpTransportPacket& feedback) = 0;
+#endif
 
 };
 

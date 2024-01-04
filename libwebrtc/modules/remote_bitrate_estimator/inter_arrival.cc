@@ -13,8 +13,10 @@
 
 #include "modules/remote_bitrate_estimator/inter_arrival.h"
 #include "modules/include/module_common_types_public.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
+#else
+#endif
 
 namespace webrtc {
 
@@ -38,9 +40,12 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
                                  uint32_t* timestamp_delta, // send_delta.
                                  int64_t* arrival_time_delta_ms, // recv_delta.
                                  int* packet_size_delta) {
+#ifdef USE_MEDIASOUP_ClASS
   MS_ASSERT(timestamp_delta != nullptr, "timestamp_delta is null");
   MS_ASSERT(arrival_time_delta_ms != nullptr, "arrival_time_delta_ms is null");
   MS_ASSERT(packet_size_delta != nullptr, "packet_size_delta is null");
+#else
+#endif
   bool calculated_deltas = false;
   if (current_timestamp_group_.IsFirstPacket()) {
     // We don't have enough data to update the filter, so we store it until we
@@ -57,9 +62,12 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
           current_timestamp_group_.timestamp - prev_timestamp_group_.timestamp;
       *arrival_time_delta_ms = current_timestamp_group_.complete_time_ms -
                                prev_timestamp_group_.complete_time_ms;
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV("timestamp previous/current [%" PRIu32 "/%" PRIu32"] complete time previous/current [%" PRIi64 "/%" PRIi64 "]",
           prev_timestamp_group_.timestamp, current_timestamp_group_.timestamp,
           prev_timestamp_group_.complete_time_ms, current_timestamp_group_.complete_time_ms);
+#else
+#endif
       // Check system time differences to see if we have an unproportional jump
       // in arrival time. In that case reset the inter-arrival computations.
       int64_t system_time_delta_ms =
@@ -67,9 +75,12 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
           prev_timestamp_group_.last_system_time_ms;
       if (*arrival_time_delta_ms - system_time_delta_ms >=
           kArrivalTimeOffsetThresholdMs) {
+#ifdef USE_MEDIASOUP_ClASS
         MS_WARN_TAG(bwe,
             "the arrival time clock offset has changed (diff = %" PRIi64 "ms, resetting",
             *arrival_time_delta_ms - system_time_delta_ms);
+#else
+#endif
         Reset();
         return false;
       }
@@ -78,19 +89,23 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
         // arrival timestamp.
         ++num_consecutive_reordered_packets_;
         if (num_consecutive_reordered_packets_ >= kReorderedResetThreshold) {
+#ifdef USE_MEDIASOUP_ClASS
           MS_WARN_TAG(bwe,
                  "packets are being reordered on the path from the "
                  "socket to the bandwidth estimator. Ignoring this "
                  "packet for bandwidth estimation, resetting");
+#else
+#endif
           Reset();
         }
         return false;
       } else {
         num_consecutive_reordered_packets_ = 0;
       }
-
+#ifdef USE_MEDIASOUP_ClASS
       MS_ASSERT(*arrival_time_delta_ms >= 0, "arrival_time_delta_ms is < 0");
-
+#else
+#endif
       *packet_size_delta = static_cast<int>(current_timestamp_group_.size) -
                            static_cast<int>(prev_timestamp_group_.size);
       calculated_deltas = true;
@@ -101,8 +116,11 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
     current_timestamp_group_.timestamp = timestamp;
     current_timestamp_group_.first_arrival_ms = arrival_time_ms;
     current_timestamp_group_.size = 0;
+#ifdef USE_MEDIASOUP_ClASS
     MS_DEBUG_DEV("new timestamp group: first_timestamp:%" PRIu32 ", first_arrival_ms:%" PRIi64,
         current_timestamp_group_.first_timestamp, current_timestamp_group_.first_arrival_ms);
+#else
+#endif
   } else {
     current_timestamp_group_.timestamp =
         LatestTimestamp(current_timestamp_group_.timestamp, timestamp);
@@ -163,11 +181,14 @@ bool InterArrival::BelongsToBurst(int64_t arrival_time_ms,
   if (!burst_grouping_) {
     return false;
   }
-
+#ifdef USE_MEDIASOUP_ClASS
   MS_ASSERT(
     current_timestamp_group_.complete_time_ms >= 0,
     "current_timestamp_group_.complete_time_ms < 0 [current_timestamp_group_.complete_time_ms:%" PRIi64 "]",
     current_timestamp_group_.complete_time_ms);
+#else
+    
+#endif
 
   int64_t arrival_time_delta_ms =
       arrival_time_ms - current_timestamp_group_.complete_time_ms;

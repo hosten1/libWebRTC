@@ -4,3 +4,6 @@ build/*
 node_modules/*
 package-lock.json
 deps/abseil-cpp/abseil-cpp/build/*
+mac/libwebrtc.xcodeproj/project.xcworkspace/xcuserdata/*
+mac/libwebrtc.xcodeproj/xcuserdata/*
+deps/*.zip

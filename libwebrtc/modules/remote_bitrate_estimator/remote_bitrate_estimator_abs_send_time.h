@@ -19,9 +19,10 @@
 #include "modules/remote_bitrate_estimator/overuse_estimator.h"
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/rate_statistics.h"
-
+#include "system_wrappers/include/clock.h"
+#ifdef USE_MEDIASOUP_ClASS
 #include "RTC/RtpPacket.hpp"
-
+#endif
 #include <stddef.h>
 #include <stdint.h>
 #include <list>
@@ -71,11 +72,16 @@ struct Cluster {
 
 class RemoteBitrateEstimatorAbsSendTime : public RemoteBitrateEstimator {
  public:
-  RemoteBitrateEstimatorAbsSendTime(RemoteBitrateObserver* observer);
+  RemoteBitrateEstimatorAbsSendTime(RemoteBitrateObserver* observer,Clock* clock);
   ~RemoteBitrateEstimatorAbsSendTime();
-
+#ifdef USE_MEDIASOUP_ClASS
   void IncomingPacket(
       int64_t arrivalTimeMs, size_t payloadSize, const RTC::RtpPacket& packet, uint32_t absSendTime) override;
+#else
+    void IncomingPacket(int64_t arrival_time_ms,
+                        size_t payload_size,
+                        const RTPHeader& header) override;
+#endif
   // This class relies on Process() being called periodically (at least once
   // every other second) for streams to be timed out properly. Therefore it
   // shouldn't be detached from the ProcessThread except if it's about to be
@@ -111,7 +117,8 @@ class RemoteBitrateEstimatorAbsSendTime : public RemoteBitrateEstimator {
   bool IsBitrateImproving(int probe_bitrate_bps) const;
 
   void TimeoutStreams(int64_t now_ms);
-
+    
+  Clock* const clock_;
   const FieldTrialBasedConfig field_trials_;
   RemoteBitrateObserver* const observer_;
   std::unique_ptr<InterArrival> inter_arrival_;

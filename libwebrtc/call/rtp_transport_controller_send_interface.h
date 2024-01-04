@@ -18,8 +18,9 @@
 // #include "modules/rtp_rtcp/include/rtp_packet_sender.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 // #include "modules/rtp_rtcp/source/rtp_packet_received.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "RTC/RtpPacket.hpp"
+#endif
 
 #include <absl/types/optional.h>
 #include <stddef.h>

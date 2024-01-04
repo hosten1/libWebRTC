@@ -6,7 +6,7 @@
         'libwebrtc.gyp:libwebrtc'
       ],
       'sources': [
-        "hello_world.cc"
+        #"hello_world.cc"
       ],
       'conditions':
       [

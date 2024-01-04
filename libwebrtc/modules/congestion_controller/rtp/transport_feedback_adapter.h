@@ -15,8 +15,12 @@
 #include "modules/congestion_controller/rtp/send_time_history.h"
 #include "rtc_base/network/sent_packet.h"
 
-#include "RTC/RTCP/FeedbackRtpTransport.hpp"
+#ifdef USE_MEDIASOUP_ClASS
 
+#include "RTC/RTCP/FeedbackRtpTransport.hpp"
+#else
+#include "modules/rtp_rtcp/source/rtcp_packet/transport_feedback.h"
+#endif
 #include <deque>
 #include <vector>
 
@@ -35,21 +39,31 @@ class TransportFeedbackAdapter {
                  Timestamp creation_time);
   absl::optional<SentPacket> ProcessSentPacket(
       const rtc::SentPacket& sent_packet);
-
+#ifdef USE_MEDIASOUP_ClASS
   absl::optional<TransportPacketsFeedback> ProcessTransportFeedback(
       const RTC::RTCP::FeedbackRtpTransportPacket& feedback,
       Timestamp feedback_time);
-
+#else
+    absl::optional<TransportPacketsFeedback> ProcessTransportFeedback(
+        const rtcp::TransportFeedback& feedback,
+        Timestamp feedback_time);
+#endif
   std::vector<PacketFeedback> GetTransportFeedbackVector() const;
 
   DataSize GetOutstandingData() const;
 
  private:
+#ifdef USE_MEDIASOUP_ClASS
   void OnTransportFeedback(const RTC::RTCP::FeedbackRtpTransportPacket& feedback);
-
   std::vector<PacketFeedback> GetPacketFeedbackVector(
       const RTC::RTCP::FeedbackRtpTransportPacket& feedback,
       Timestamp feedback_time);
+#else
+    void OnTransportFeedback(const rtcp::TransportFeedback& feedback);
+    std::vector<PacketFeedback> GetPacketFeedbackVector(
+        const rtcp::TransportFeedback& feedback,
+        Timestamp feedback_time);
+#endif
 
   const bool allow_duplicates_;
 

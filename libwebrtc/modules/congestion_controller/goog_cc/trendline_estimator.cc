@@ -7,17 +7,20 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::TrendlineEstimator"
+#else
 // #define MS_LOG_DEV_LEVEL 3
-
+#endif
 #include "modules/congestion_controller/goog_cc/trendline_estimator.h"
 
 #include "modules/remote_bitrate_estimator/include/bwe_defines.h"
 #include "rtc_base/numerics/safe_minmax.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#else
+// #define MS_LOG_DEV_LEVEL 3
+#endif
 #include <absl/types/optional.h>
 #include <math.h>
 #include <algorithm>
@@ -44,11 +47,16 @@ size_t ReadTrendlineFilterWindowSize(
   if (parsed_values == 1) {
     if (window_size > 1)
       return window_size;
+#ifdef USE_MEDIASOUP_ClASS
     MS_WARN_DEV("window size must be greater than 1");
   }
   MS_WARN_DEV(
     "failed to parse parameters for BweWindowSizeInPackets"
     " experiment from field trial string, using default");
+#else
+  }
+  
+#endif
   return kDefaultTrendlineWindowSize;
 }
 
@@ -120,9 +128,12 @@ TrendlineEstimator::TrendlineEstimator(
       hypothesis_(BandwidthUsage::kBwNormal),
       hypothesis_predicted_(BandwidthUsage::kBwNormal),
       network_state_predictor_(network_state_predictor) {
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV(
     "using Trendline filter for delay change estimation with window size: %zu",
     window_size_);
+#else
+#endif
 }
 
 TrendlineEstimator::~TrendlineEstimator() {}
@@ -167,7 +178,7 @@ void TrendlineEstimator::Update(double recv_delta_ms,
       //   trend < 0     ->  the delay decreases, queues are being emptied
       trend = LinearFitSlope(delay_hist_).value_or(trend);
     }
-
+#ifdef USE_MEDIASOUP_ClASS
     // BWE_TEST_LOGGING_PLOT(1, "trendline_slope", arrival_time_ms, trend);
 
     MS_DEBUG_DEV("trend:%f, send_delta_ms:%f, recv_delta_ms:%f, delta_ms:%f arrival_time_ms:%" PRIi64 ", accumulated_delay_:%f, smoothed_delay_:%f", trend, send_delta_ms, recv_delta_ms, delta_ms, arrival_time_ms, accumulated_delay_, smoothed_delay_);
@@ -176,6 +187,14 @@ void TrendlineEstimator::Update(double recv_delta_ms,
   else {
     MS_DEBUG_DEV("no calculated deltas");
   }
+#else
+    // BWE_TEST_LOGGING_PLOT(1, "trendline_slope", arrival_time_ms, trend);
+
+    Detect(trend, send_delta_ms, arrival_time_ms);
+  }
+  else {
+  }
+#endif
 
   if (network_state_predictor_) {
     hypothesis_predicted_ = network_state_predictor_->Update(
@@ -212,6 +231,7 @@ void TrendlineEstimator::Detect(double trend, double ts_delta, int64_t now_ms) {
       if (trend >= prev_trend_) {
         time_over_using_ = 0;
         overuse_counter_ = 0;
+#ifdef USE_MEDIASOUP_ClASS
         MS_DEBUG_DEV("hypothesis_: BandwidthUsage::kBwOverusing");
 
 #if MS_LOG_DEV_LEVEL == 3
@@ -219,7 +239,9 @@ void TrendlineEstimator::Detect(double trend, double ts_delta, int64_t now_ms) {
           MS_DEBUG_DEV("arrival_time_ms - first_arrival_time_ms_:%f, smoothed_delay_:%f", kv.first, kv.second);
         }
 #endif
-
+#else
+         
+#endif
         hypothesis_ = BandwidthUsage::kBwOverusing;
       }
     }
@@ -227,6 +249,8 @@ void TrendlineEstimator::Detect(double trend, double ts_delta, int64_t now_ms) {
     time_over_using_ = -1;
     overuse_counter_ = 0;
     hypothesis_ = BandwidthUsage::kBwUnderusing;
+#ifdef USE_MEDIASOUP_ClASS
+
     MS_DEBUG_DEV("---- BandwidthUsage::kBwUnderusing ---");
   } else {
     time_over_using_ = -1;
@@ -234,6 +258,15 @@ void TrendlineEstimator::Detect(double trend, double ts_delta, int64_t now_ms) {
     MS_DEBUG_DEV("---- BandwidthUsage::kBwNormal ---");
     hypothesis_ = BandwidthUsage::kBwNormal;
   }
+#else
+    
+  } else {
+    time_over_using_ = -1;
+    overuse_counter_ = 0;
+      
+    hypothesis_ = BandwidthUsage::kBwNormal;
+  }
+#endif
   prev_trend_ = trend;
   UpdateThreshold(modified_trend, now_ms);
 }

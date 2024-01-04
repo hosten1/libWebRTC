@@ -13,8 +13,12 @@
 #include <stdio.h>
 
 #include <string>
+#ifdef USE_MEDIASOUP_ClASS
+#include "Logger.hpp"
+#else
+//#include "rtc_base/logging.h"
+#endif
 
-#include "rtc_base/logging.h"
 #include "system_wrappers/include/field_trial.h"
 
 namespace webrtc {
@@ -31,13 +35,21 @@ absl::optional<double> JitterUpperBoundExperiment::GetUpperBoundSigmas() {
 
   double upper_bound_sigmas;
   if (sscanf(group.c_str(), "Enabled-%lf", &upper_bound_sigmas) != 1) {
-    RTC_LOG(LS_WARNING) << "Invalid number of parameters provided.";
+#ifndef USE_MEDIASOUP_ClASS
+//    RTC_LOG(LS_WARNING) << "Invalid number of parameters provided.";
+#else
+      MS_DEBUG_TAG(bwe, "Invalid number of parameters provided.");
+#endif
     return absl::nullopt;
   }
 
   if (upper_bound_sigmas < 0) {
-    RTC_LOG(LS_WARNING) << "Invalid jitter upper bound sigmas, must be >= 0.0: "
-                        << upper_bound_sigmas;
+#ifndef USE_MEDIASOUP_ClASS
+//    RTC_LOG(LS_WARNING) << "Invalid jitter upper bound sigmas, must be >= 0.0: "
+//                        << upper_bound_sigmas;
+#else
+      MS_DEBUG_TAG(bwe, "Invalid jitter upper bound sigmas, must be >= 0.0: %lf",upper_bound_sigmas);
+#endif
     return absl::nullopt;
   }
 
