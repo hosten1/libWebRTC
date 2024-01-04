@@ -256,6 +256,14 @@
 		1B6775A82B4659BE0045883A /* transport_feedback.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775A42B4659BE0045883A /* transport_feedback.h */; };
 		1B6775A92B4659BE0045883A /* rtpfb.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775A52B4659BE0045883A /* rtpfb.cc */; };
 		1B6775AB2B465AEF0045883A /* common_header.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775AA2B465AEF0045883A /* common_header.cc */; };
+		1B6775B02B468AB60045883A /* critical_section.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775AC2B468AB60045883A /* critical_section.cc */; };
+		1B6775B12B468AB60045883A /* platform_thread_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775AD2B468AB60045883A /* platform_thread_types.h */; };
+		1B6775B22B468AB60045883A /* critical_section.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775AE2B468AB60045883A /* critical_section.h */; };
+		1B6775B32B468AB60045883A /* platform_thread_types.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775AF2B468AB60045883A /* platform_thread_types.cc */; };
+		1B6775B62B468F800045883A /* rtp_packet_history.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775B42B468F7F0045883A /* rtp_packet_history.cc */; };
+		1B6775B72B468F800045883A /* rtp_packet_history.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775B52B468F7F0045883A /* rtp_packet_history.h */; };
+		1B6775BA2B4690050045883A /* rtp_packet_to_send.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1B6775B82B4690050045883A /* rtp_packet_to_send.cc */; };
+		1B6775BB2B4690050045883A /* rtp_packet_to_send.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B6775B92B4690050045883A /* rtp_packet_to_send.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -515,6 +523,14 @@
 		1B6775A42B4659BE0045883A /* transport_feedback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = transport_feedback.h; sourceTree = "<group>"; };
 		1B6775A52B4659BE0045883A /* rtpfb.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rtpfb.cc; sourceTree = "<group>"; };
 		1B6775AA2B465AEF0045883A /* common_header.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = common_header.cc; sourceTree = "<group>"; };
+		1B6775AC2B468AB60045883A /* critical_section.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = critical_section.cc; sourceTree = "<group>"; };
+		1B6775AD2B468AB60045883A /* platform_thread_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform_thread_types.h; sourceTree = "<group>"; };
+		1B6775AE2B468AB60045883A /* critical_section.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = critical_section.h; sourceTree = "<group>"; };
+		1B6775AF2B468AB60045883A /* platform_thread_types.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform_thread_types.cc; sourceTree = "<group>"; };
+		1B6775B42B468F7F0045883A /* rtp_packet_history.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rtp_packet_history.cc; sourceTree = "<group>"; };
+		1B6775B52B468F7F0045883A /* rtp_packet_history.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rtp_packet_history.h; sourceTree = "<group>"; };
+		1B6775B82B4690050045883A /* rtp_packet_to_send.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rtp_packet_to_send.cc; sourceTree = "<group>"; };
+		1B6775B92B4690050045883A /* rtp_packet_to_send.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rtp_packet_to_send.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -656,6 +672,10 @@
 		1B6773532B463CF60045883A /* rtc_base */ = {
 			isa = PBXGroup;
 			children = (
+				1B6775AC2B468AB60045883A /* critical_section.cc */,
+				1B6775AE2B468AB60045883A /* critical_section.h */,
+				1B6775AF2B468AB60045883A /* platform_thread_types.cc */,
+				1B6775AD2B468AB60045883A /* platform_thread_types.h */,
 				1B6773732B463CF60045883A /* arraysize.h */,
 				1B67737E2B463CF60045883A /* atomic_ops.h */,
 				1B6773552B463CF60045883A /* bit_buffer.cc */,
@@ -1432,30 +1452,34 @@
 		1B6774502B463CF60045883A /* source */ = {
 			isa = PBXGroup;
 			children = (
-				1B6775A12B4659BE0045883A /* rtcp_packet */,
-				1B6774512B463CF60045883A /* time_util.cc */,
-				1B6774522B463CF60045883A /* rtp_packet.cc */,
-				1B6774532B463CF60045883A /* rtp_generic_frame_descriptor.cc */,
-				1B6774542B463CF60045883A /* time_util.h */,
-				1B6774552B463CF60045883A /* rtp_dependency_descriptor_reader.h */,
-				1B6774562B463CF60045883A /* rtp_header_extensions.cc */,
-				1B6774592B463CF60045883A /* rtp_video_header.h */,
-				1B67745A2B463CF60045883A /* rtp_packet_received.h */,
-				1B67745B2B463CF60045883A /* rtp_packet.h */,
-				1B67745C2B463CF60045883A /* rtp_generic_frame_descriptor_extension.h */,
-				1B67745D2B463CF60045883A /* rtp_format.h */,
-				1B67745E2B463CF60045883A /* rtp_generic_frame_descriptor.h */,
-				1B67745F2B463CF60045883A /* rtp_dependency_descriptor_extension.h */,
-				1B6774602B463CF60045883A /* rtp_packet_received.cc */,
-				1B6774612B463CF60045883A /* rtp_rtcp_config.h */,
-				1B6774622B463CF60045883A /* rtp_header_extension_size.cc */,
-				1B6774632B463CF60045883A /* rtp_dependency_descriptor_writer.h */,
-				1B6774642B463CF60045883A /* rtp_header_extension_size.h */,
-				1B6774652B463CF60045883A /* rtp_dependency_descriptor_extension.cc */,
-				1B6774662B463CF60045883A /* rtp_generic_frame_descriptor_extension.cc */,
-				1B6774672B463CF60045883A /* rtp_header_extension_map.cc */,
-				1B6774682B463CF60045883A /* rtp_header_extensions.h */,
 				1B6774692B463CF60045883A /* byte_io.h */,
+				1B6775A12B4659BE0045883A /* rtcp_packet */,
+				1B6774652B463CF60045883A /* rtp_dependency_descriptor_extension.cc */,
+				1B67745F2B463CF60045883A /* rtp_dependency_descriptor_extension.h */,
+				1B6774552B463CF60045883A /* rtp_dependency_descriptor_reader.h */,
+				1B6774632B463CF60045883A /* rtp_dependency_descriptor_writer.h */,
+				1B67745D2B463CF60045883A /* rtp_format.h */,
+				1B6774662B463CF60045883A /* rtp_generic_frame_descriptor_extension.cc */,
+				1B67745C2B463CF60045883A /* rtp_generic_frame_descriptor_extension.h */,
+				1B6774532B463CF60045883A /* rtp_generic_frame_descriptor.cc */,
+				1B67745E2B463CF60045883A /* rtp_generic_frame_descriptor.h */,
+				1B6774672B463CF60045883A /* rtp_header_extension_map.cc */,
+				1B6774622B463CF60045883A /* rtp_header_extension_size.cc */,
+				1B6774642B463CF60045883A /* rtp_header_extension_size.h */,
+				1B6774562B463CF60045883A /* rtp_header_extensions.cc */,
+				1B6774682B463CF60045883A /* rtp_header_extensions.h */,
+				1B6775B42B468F7F0045883A /* rtp_packet_history.cc */,
+				1B6775B52B468F7F0045883A /* rtp_packet_history.h */,
+				1B6775B82B4690050045883A /* rtp_packet_to_send.cc */,
+				1B6775B92B4690050045883A /* rtp_packet_to_send.h */,
+				1B6774602B463CF60045883A /* rtp_packet_received.cc */,
+				1B67745A2B463CF60045883A /* rtp_packet_received.h */,
+				1B6774522B463CF60045883A /* rtp_packet.cc */,
+				1B67745B2B463CF60045883A /* rtp_packet.h */,
+				1B6774612B463CF60045883A /* rtp_rtcp_config.h */,
+				1B6774592B463CF60045883A /* rtp_video_header.h */,
+				1B6774512B463CF60045883A /* time_util.cc */,
+				1B6774542B463CF60045883A /* time_util.h */,
 			);
 			path = source;
 			sourceTree = "<group>";
@@ -1675,6 +1699,7 @@
 				1B6775892B463CF60045883A /* transport_feedback_adapter.h in Headers */,
 				1B67749C2B463CF60045883A /* clock.h in Headers */,
 				1B6775512B463CF60045883A /* rtp_header_parser.h in Headers */,
+				1B6775B12B468AB60045883A /* platform_thread_types.h in Headers */,
 				1B67749B2B463CF60045883A /* ntp_time.h in Headers */,
 				1B6775322B463CF60045883A /* vp9_globals.h in Headers */,
 				1B6774FC2B463CF60045883A /* rtp_headers.h in Headers */,
@@ -1730,6 +1755,7 @@
 				1B6774B82B463CF60045883A /* field_trial_units.h in Headers */,
 				1B6775522B463CF60045883A /* receive_statistics.h in Headers */,
 				1B6775442B463CF60045883A /* inter_arrival.h in Headers */,
+				1B6775B72B468F800045883A /* rtp_packet_history.h in Headers */,
 				1B6775122B463CF60045883A /* goog_cc_factory.h in Headers */,
 				1B6775602B463CF60045883A /* rtp_format.h in Headers */,
 				1B6774F62B463CF60045883A /* string_encode.h in Headers */,
@@ -1757,8 +1783,10 @@
 				1B6775622B463CF60045883A /* rtp_dependency_descriptor_extension.h in Headers */,
 				1B6774AC2B463CF60045883A /* ref_count.h in Headers */,
 				1B6774F42B463CF60045883A /* random.h in Headers */,
+				1B6775BB2B4690050045883A /* rtp_packet_to_send.h in Headers */,
 				1B6775882B463CF60045883A /* send_time_history.h in Headers */,
 				1B6774FF2B463CF60045883A /* video_rotation.h in Headers */,
+				1B6775B22B468AB60045883A /* critical_section.h in Headers */,
 				1B6774E82B463CF60045883A /* crypt_string.h in Headers */,
 				1B6775222B463CF60045883A /* time_delta.h in Headers */,
 				1B6775002B463CF60045883A /* hdr_metadata.h in Headers */,
@@ -1859,6 +1887,7 @@
 				1B6775632B463CF60045883A /* rtp_packet_received.cc in Sources */,
 				1B67752F2B463CF60045883A /* module_common_types.cc in Sources */,
 				1B6774B02B463CF60045883A /* rw_lock_posix.cc in Sources */,
+				1B6775B02B468AB60045883A /* critical_section.cc in Sources */,
 				1B6774F92B463CF60045883A /* rtp_transport_controller_send.cc in Sources */,
 				1B6774CE2B463CF60045883A /* crc32.cc in Sources */,
 				1B6775692B463CF60045883A /* rtp_generic_frame_descriptor_extension.cc in Sources */,
@@ -1879,6 +1908,7 @@
 				1B67758C2B463CF60045883A /* transport_feedback_adapter.cc in Sources */,
 				1B67750E2B463CF60045883A /* field_trial_based_config.cc in Sources */,
 				1B67756A2B463CF60045883A /* rtp_header_extension_map.cc in Sources */,
+				1B6775BA2B4690050045883A /* rtp_packet_to_send.cc in Sources */,
 				1B6774C22B463CF60045883A /* sent_packet.cc in Sources */,
 				1B67756D2B463CF60045883A /* send_side_bandwidth_estimation.cc in Sources */,
 				1B6775872B463CF60045883A /* acknowledged_bitrate_estimator.cc in Sources */,
@@ -1904,8 +1934,10 @@
 				1B6774BA2B463CF60045883A /* jitter_upper_bound_experiment.cc in Sources */,
 				1B67749E2B463CF60045883A /* sleep.cc in Sources */,
 				1B6774AF2B463CF60045883A /* rw_lock_wrapper.cc in Sources */,
+				1B6775B32B468AB60045883A /* platform_thread_types.cc in Sources */,
 				1B6775172B463CF60045883A /* audio_format.cc in Sources */,
 				1B6775572B463CF60045883A /* rtp_generic_frame_descriptor.cc in Sources */,
+				1B6775B62B468F800045883A /* rtp_packet_history.cc in Sources */,
 				1B6775752B463CF60045883A /* congestion_window_pushback_controller.cc in Sources */,
 				1B6775232B463CF60045883A /* frequency.cc in Sources */,
 				1B6775292B463CF60045883A /* network_state_predictor.cc in Sources */,

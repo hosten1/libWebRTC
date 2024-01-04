@@ -69,10 +69,14 @@
       'libwebrtc/api/audio_codecs/audio_format.cc',
       # red sorce end
      # lym pacer
+     'libwebrtc/rtc_base/critical_section.cc',
+     'libwebrtc/rtc_base/platform_thread_types.cc',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet.cc',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/common_header.cc',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.ccc',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.cc',
+     'libwebrtc/modules/rtp_rtcp/source/rtp_packet_history.cc',
+     'libwebrtc/modules/rtp_rtcp/source/rtp_packet_to_send.cc',
       # lyn pacer end
       'libwebrtc/rtc_base/bit_buffer.cc',
       'libwebrtc/rtc_base/byte_buffer.cc',
@@ -159,10 +163,14 @@
       'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_writer.h',
       #lym end red
       # lym pacer
+     'libwebrtc/rtc_base/critical_section.h',
+     'libwebrtc/rtc_base/platform_thread_types.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/common_header.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.h',
+     'libwebrtc/modules/rtp_rtcp/source/rtp_packet_history.h',
+     'libwebrtc/modules/rtp_rtcp/source/rtp_packet_to_send.h',
       # lyn pacer end
       'libwebrtc/modules/pacing/interval_budget.h',
       'libwebrtc/modules/pacing/paced_sender.h',
