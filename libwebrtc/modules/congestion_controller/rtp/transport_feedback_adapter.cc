@@ -129,7 +129,7 @@ absl::optional<SentPacket> TransportFeedbackAdapter::ProcessSentPacket(
 #ifdef USE_MEDIASOUP_ClASS
 absl::optional<TransportPacketsFeedback>
 TransportFeedbackAdapter::ProcessTransportFeedback(
-    const rtcp::TransportFeedback& feedback,
+    const RTC::RTCP::FeedbackRtpTransportPacket& feedback,
     Timestamp feedback_receive_time) {
 #else
     absl::optional<TransportPacketsFeedback>

@@ -252,7 +252,7 @@ void RtpTransportControllerSend::OnTransportFeedback(
 
   absl::optional<TransportPacketsFeedback> feedback_msg =
       transport_feedback_adapter_.ProcessTransportFeedback(
-          feedback, Timestamp::ms(DepLibUV::GetTimeMsInt64()));
+          feedback, Timestamp::ms(clock_->TimeInMilliseconds()));
   if (feedback_msg)
     PostUpdates(controller_->OnTransportPacketsFeedback(*feedback_msg));
   pacer_.UpdateOutstandingData(
