@@ -129,6 +129,7 @@
       'libwebrtc/system_wrappers/source/cpu_features.cc',
       'libwebrtc/system_wrappers/source/metrics.cc',
       'libwebrtc/system_wrappers/source/rtp_to_ntp_estimator.cc',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_video_header.cc',
 
       # lym red decode database end
        
