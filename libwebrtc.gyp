@@ -334,6 +334,7 @@
       'libwebrtc/system_wrappers/include/event_wrapper.h',
       'libwebrtc/system_wrappers/include/metrics.h',
       'libwebrtc/system_wrappers/include/rtp_to_ntp_estimator.h',
+      'libwebrtc/common_audio/signal_processing/dot_product_with_scale.h',
       # lym red decode database end
     ],
     'include_dirs':

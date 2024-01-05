@@ -1390,8 +1390,8 @@
 			isa = PBXGroup;
 			children = (
 				1BD723B72B47D2D600A8BBC2 /* dot_product_with_scale.cc */,
-				1BD723B82B47D2D600A8BBC2 /* include */,
 				1BD723BB2B47D2D600A8BBC2 /* dot_product_with_scale.h */,
+				1BD723B82B47D2D600A8BBC2 /* include */,
 			);
 			path = signal_processing;
 			sourceTree = "<group>";
