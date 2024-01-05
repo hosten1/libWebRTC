@@ -13,12 +13,19 @@
 #ifndef MODULES_REMOTE_BITRATE_ESTIMATOR_INCLUDE_REMOTE_BITRATE_ESTIMATOR_H_
 #define MODULES_REMOTE_BITRATE_ESTIMATOR_INCLUDE_REMOTE_BITRATE_ESTIMATOR_H_
 
+#ifdef __linux__
+#ifndef USE_MEDIASOUP_ClASS
+#define USE_MEDIASOUP_ClASS
+#endif
+#endif
+
 #include <map>
 #include <vector>
 
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "RTC/RtpPacket.hpp"
+#endif
 
 namespace webrtc {
 namespace rtcp {
@@ -62,12 +69,18 @@ class RemoteBitrateEstimator {
   // remote bitrate estimate will be updated. Note that |payload_size| is the
   // packet size excluding headers.
   // Note that |arrival_time_ms| can be of an arbitrary time base.
-  virtual void IncomingPacket(
-      int64_t arrival_time_ms,
-      size_t payload_size,
-      const RTC::RtpPacket& packet,
-      uint32_t send_time_24bits) = 0;
-
+  
+#ifdef USE_MEDIASOUP_ClASS
+    virtual void IncomingPacket(
+        int64_t arrival_time_ms,
+        size_t payload_size,
+        const RTC::RtpPacket& packet,
+        uint32_t send_time_24bits) = 0;
+#else
+    virtual void IncomingPacket(int64_t arrival_time_ms,
+                        size_t payload_size,
+                        const RTPHeader& header) = 0;
+#endif
   // Removes all data for |ssrc|.
   virtual void RemoveStream(uint32_t ssrc) = 0;
 

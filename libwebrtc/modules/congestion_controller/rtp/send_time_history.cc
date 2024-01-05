@@ -7,15 +7,15 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::SendTimeHistory"
 // #define MS_LOG_DEV_LEVEL 3
-
+#endif
 #include "modules/congestion_controller/rtp/send_time_history.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#endif
 #include <algorithm>
 #include <utility>
 
@@ -48,7 +48,9 @@ void SendTimeHistory::AddNewPacket(PacketFeedback packet) {
 
 void SendTimeHistory::AddUntracked(size_t packet_size, int64_t send_time_ms) {
   if (send_time_ms < last_send_time_ms_) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_WARN_TAG(bwe, "ignoring untracked data for out of order packet");
+#endif
   }
   pending_untracked_size_ += packet_size;
   last_untracked_send_time_ms_ =
@@ -68,10 +70,12 @@ SendTimeHistory::Status SendTimeHistory::OnSentPacket(uint16_t sequence_number,
     AddPacketBytes(it->second);
   if (pending_untracked_size_ > 0) {
     if (send_time_ms < last_untracked_send_time_ms_) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_WARN_TAG(bwe,
           "appending acknowledged data for out of order packet."
           " (Diff:%" PRIi64 " ms)",
           last_untracked_send_time_ms_ - send_time_ms);
+#endif
     }
     it->second.unacknowledged_data += pending_untracked_size_;
     pending_untracked_size_ = 0;

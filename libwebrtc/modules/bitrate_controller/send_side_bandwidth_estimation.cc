@@ -14,8 +14,9 @@
 #include "modules/bitrate_controller/send_side_bandwidth_estimation.h"
 #include "modules/remote_bitrate_estimator/include/bwe_defines.h"
 #include "system_wrappers/source/field_trial.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
+#endif
 
 #include <absl/memory/memory.h>
 #include <algorithm>
@@ -93,8 +94,10 @@ bool ReadBweLossExperimentParameters(float* low_loss_threshold,
         // << "Bitrate must be smaller enough to avoid overflows.";
     return true;
   }
+#ifdef USE_MEDIASOUP_ClASS
   MS_WARN_TAG(bwe, "Failed to parse parameters for BweLossExperiment "
       "experiment from field trial string. Using default");
+#endif
 
   *low_loss_threshold = kDefaultLowLossThreshold;
   *high_loss_threshold = kDefaultHighLossThreshold;
@@ -226,9 +229,11 @@ SendSideBandwidthEstimation::SendSideBandwidthEstimation()
     if (ReadBweLossExperimentParameters(&low_loss_threshold_,
                                         &high_loss_threshold_,
                                         &bitrate_threshold_kbps)) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_TAG(bwe,  "Enabled BweLossExperiment with parameters %f, %f, %d",
                        low_loss_threshold_, high_loss_threshold_,
                        bitrate_threshold_kbps);
+#endif
       bitrate_threshold_ = DataRate::kbps(bitrate_threshold_kbps);
     }
   }
@@ -277,9 +282,10 @@ void SendSideBandwidthEstimation::SetBitrates(
 }
 
 void SendSideBandwidthEstimation::SetSendBitrate(DataRate bitrate,
-                                                 Timestamp at_time) {
+                                             Timestamp at_time) {
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV("bitrate: %lld", bitrate.bps());
-
+#endif
   // RTC_DCHECK_GT(bitrate, DataRate::Zero());
   // Reset to avoid being capped by the estimate.
   delay_based_bitrate_ = DataRate::Zero();
@@ -313,13 +319,14 @@ void SendSideBandwidthEstimation::CurrentEstimate(int* bitrate,
   *bitrate = std::max<int32_t>(current_bitrate_.bps<int>(), GetMinBitrate());
   *loss = last_fraction_loss_;
   *rtt = last_round_trip_time_.ms<int64_t>();
-
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV("bitrate:%d (current_bitrate_:%" PRIi64 ", GetMinBitrate():%d), loss:%d, rtt:%" PRIi64,
       *bitrate,
       current_bitrate_.bps(),
       GetMinBitrate(),
       *loss,
       *rtt);
+#endif
 }
 
 DataRate SendSideBandwidthEstimation::GetEstimatedLinkCapacity() const {
@@ -550,8 +557,10 @@ void SendSideBandwidthEstimation::UpdateEstimate(Timestamp at_time) {
              (last_timeout_.IsInfinite() ||
               at_time - last_timeout_ > kTimeoutInterval)) {
     if (in_timeout_experiment_) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_WARN_TAG(bwe, "Feedback timed out (%s), reducint bitrate",
                           ToString(time_since_loss_feedback).c_str());
+#endif
       new_bitrate = new_bitrate * 0.8;
       // Reset accumulators since we've already acted on missing feedback and
       // shouldn't to act again on these old lost packets.
@@ -615,8 +624,10 @@ DataRate SendSideBandwidthEstimation::MaybeRampupOrBackoff(DataRate new_bitrate,
              (last_timeout_.IsInfinite() ||
               at_time - last_timeout_ > kTimeoutInterval)) {
     if (in_timeout_experiment_) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_WARN_TAG(bwe,"Feedback timed out (%s), reducint bitrate",
                           ToString(time_since_loss_feedback).c_str());
+#endif
       new_bitrate = new_bitrate * 0.8;
       // Reset accumulators since we've already acted on missing feedback and
       // shouldn't to act again on these old lost packets.
@@ -630,6 +641,7 @@ DataRate SendSideBandwidthEstimation::MaybeRampupOrBackoff(DataRate new_bitrate,
 
 void SendSideBandwidthEstimation::CapBitrateToThresholds(Timestamp at_time,
                                                          DataRate bitrate) {
+#ifdef USE_MEDIASOUP_ClASS
   if (bwe_incoming_ > DataRate::Zero() && bitrate > bwe_incoming_) {
     MS_DEBUG_DEV("bwe_incoming_:%lld", bwe_incoming_.bps());
     bitrate = bwe_incoming_;
@@ -658,6 +670,28 @@ void SendSideBandwidthEstimation::CapBitrateToThresholds(Timestamp at_time,
                         ToString(min_bitrate_configured_).c_str());
       last_low_bitrate_log_ = at_time;
     }
+#else
+      if (bwe_incoming_ > DataRate::Zero() && bitrate > bwe_incoming_) {
+        bitrate = bwe_incoming_;
+      }
+      if (delay_based_bitrate_ > DataRate::Zero() &&
+          bitrate > delay_based_bitrate_) {
+        bitrate = delay_based_bitrate_;
+      }
+      if (loss_based_bandwidth_estimation_.Enabled() &&
+          loss_based_bandwidth_estimation_.GetEstimate() > DataRate::Zero()) {
+        bitrate = std::min(bitrate, loss_based_bandwidth_estimation_.GetEstimate());
+      }
+      if (bitrate > max_bitrate_configured_) {
+        bitrate = max_bitrate_configured_;
+      }
+      if (bitrate < min_bitrate_configured_) {
+        if (last_low_bitrate_log_.IsInfinite() ||
+            at_time - last_low_bitrate_log_ > kLowBitrateLogPeriod) {
+
+          last_low_bitrate_log_ = at_time;
+        }
+#endif
     bitrate = min_bitrate_configured_;
   }
 
@@ -667,7 +701,9 @@ void SendSideBandwidthEstimation::CapBitrateToThresholds(Timestamp at_time,
     last_logged_fraction_loss_ = last_fraction_loss_;
     last_rtc_event_log_ = at_time;
   }
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV("current_bitrate_:%lld", current_bitrate_.bps());
+#endif
   current_bitrate_ = bitrate;
 
   if (acknowledged_rate_) {

@@ -29,7 +29,7 @@
 #include <vector>
 
 namespace webrtc {
-
+class Clock;
 // TODO(nisse): When we get the underlying transports here, we should
 // have one object implementing RtpTransportControllerSendInterface
 // per transport, sharing the same congestion controller.
@@ -40,6 +40,7 @@ class RtpTransportControllerSend final
       public NetworkStateEstimateObserver {
  public:
   RtpTransportControllerSend(
+      Clock* clock,
       PacketRouter* packet_router,
       NetworkStatePredictorFactoryInterface* predictor_factory,
       NetworkControllerFactoryInterface* controller_factory,
@@ -77,8 +78,11 @@ class RtpTransportControllerSend final
 
   // Implements TransportFeedbackObserver interface
   void OnAddPacket(const RtpPacketSendInfo& packet_info) override;
+#ifdef USE_MEDIASOUP_ClASS
   void OnTransportFeedback(const RTC::RTCP::FeedbackRtpTransportPacket& feedback) override;
-
+#else
+  void OnTransportFeedback(const rtcp::TransportFeedback& feedback) override;
+#endif
   // Implements NetworkStateEstimateObserver interface
   void OnRemoteNetworkEstimate(NetworkStateEstimate estimate) override;
 
@@ -94,7 +98,8 @@ class RtpTransportControllerSend final
                                           int64_t now_ms);
   void PostUpdates(NetworkControlUpdate update);
   void UpdateControlState();
-
+  
+  Clock* const clock_;
   const FieldTrialBasedConfig trial_based_config_;
 
   PacketRouter* packet_router_;

@@ -7,19 +7,21 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::TransportFeedbackAdapter"
 // #define MS_LOG_DEV_LEVEL 3
+#else
 
+#endif
 #include "modules/congestion_controller/rtp/transport_feedback_adapter.h"
 #include "api/units/timestamp.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "system_wrappers/source/field_trial.h"
 #include "mediasoup_helpers.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
 #include "RTC/RTCP/FeedbackRtpTransport.hpp"
-
+#endif
 #include <stdlib.h>
 #include <algorithm>
 #include <cmath>
@@ -124,11 +126,17 @@ absl::optional<SentPacket> TransportFeedbackAdapter::ProcessSentPacket(
   }
   return absl::nullopt;
 }
-
+#ifdef USE_MEDIASOUP_ClASS
 absl::optional<TransportPacketsFeedback>
 TransportFeedbackAdapter::ProcessTransportFeedback(
     const RTC::RTCP::FeedbackRtpTransportPacket& feedback,
     Timestamp feedback_receive_time) {
+#else
+    absl::optional<TransportPacketsFeedback>
+    TransportFeedbackAdapter::ProcessTransportFeedback(
+        const rtcp::TransportFeedback& feedback,
+        Timestamp feedback_receive_time) {
+#endif
   DataSize prior_in_flight = GetOutstandingData();
 
   last_packet_feedback_vector_ =
@@ -147,15 +155,18 @@ TransportFeedbackAdapter::ProcessTransportFeedback(
   for (const PacketFeedback& rtp_feedback : feedback_vector) {
     if (rtp_feedback.send_time_ms != PacketFeedback::kNoSendTime) {
       auto feedback = NetworkPacketFeedbackFromRtpPacketFeedback(rtp_feedback);
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV("feedback received for RTP packet: [seq_num: %" PRIi64 ", send_time:%" PRIi64 ", size: %lld, feedback.receive_time:%" PRIi64,
           feedback.sent_packet.sequence_number,
           feedback.sent_packet.send_time.ms(),
           feedback.sent_packet.size.bytes(),
           feedback.receive_time.ms());
-
+#endif
       msg.packet_feedbacks.push_back(feedback);
     } else if (rtp_feedback.arrival_time_ms == PacketFeedback::kNotReceived) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV("--- rtp_feedback.arrival_time_ms == PacketFeedback::kNotReceived ---");
+#endif
       msg.sendless_arrival_times.push_back(Timestamp::PlusInfinity());
     } else {
       msg.sendless_arrival_times.push_back(
@@ -171,15 +182,16 @@ TransportFeedbackAdapter::ProcessTransportFeedback(
   msg.feedback_time = feedback_receive_time;
   msg.prior_in_flight = prior_in_flight;
   msg.data_in_flight = GetOutstandingData();
-
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV("prior_in_flight:%lld, data_in_flight:%lld", msg.prior_in_flight.bytes(), msg.data_in_flight.bytes());
+#endif
   return msg;
 }
 
 DataSize TransportFeedbackAdapter::GetOutstandingData() const {
   return send_time_history_.GetOutstandingData(local_net_id_, remote_net_id_);
 }
-
+#ifdef USE_MEDIASOUP_ClASS
 std::vector<PacketFeedback> TransportFeedbackAdapter::GetPacketFeedbackVector(
     const RTC::RTCP::FeedbackRtpTransportPacket& feedback,
     Timestamp feedback_time) {
@@ -197,7 +209,9 @@ std::vector<PacketFeedback> TransportFeedbackAdapter::GetPacketFeedbackVector(
 
   std::vector<PacketFeedback> packet_feedback_vector;
   if (feedback.GetPacketStatusCount() == 0) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_WARN_DEV("empty transport feedback packet received");
+#endif
     return packet_feedback_vector;
   }
   packet_feedback_vector.reserve(feedback.GetPacketStatusCount());
@@ -235,15 +249,89 @@ std::vector<PacketFeedback> TransportFeedbackAdapter::GetPacketFeedbackVector(
     }
 
     if (failed_lookups > 0) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_WARN_DEV("failed to lookup send time for %zu"
                   " packet%s, send time history too small?",
                   failed_lookups,
                   (failed_lookups > 1 ? "s" : ""));
+#endif
     }
   }
   return packet_feedback_vector;
 }
+#else
+    std::vector<PacketFeedback> TransportFeedbackAdapter::GetPacketFeedbackVector(
+        const rtcp::TransportFeedback& feedback,
+        Timestamp feedback_time) {
+      // Add timestamp deltas to a local time base selected on first packet arrival.
+      // This won't be the true time base, but makes it easier to manually inspect
+      // time stamps.
+      if (last_timestamp_us_ == kNoTimestamp) {
+        current_offset_ms_ = feedback_time.ms();
+      } else {
+        current_offset_ms_ += feedback.GetBaseDeltaUs(last_timestamp_us_) / 1000;
+      }
+      last_timestamp_us_ = feedback.GetBaseTimeUs();
 
+      std::vector<PacketFeedback> packet_feedback_vector;
+      if (feedback.GetPacketStatusCount() == 0) {
+//        RTC_LOG(LS_INFO) << "Empty transport feedback packet received.";
+#ifdef USE_MEDIASOUP_ClASS
+    MS_WARN_DEV("empty transport feedback packet received");
+#endif
+        return packet_feedback_vector;
+      }
+      packet_feedback_vector.reserve(feedback.GetPacketStatusCount());
+      {
+//        rtc::CritScope cs(&lock_);
+        size_t failed_lookups = 0;
+        int64_t offset_us = 0;
+        int64_t timestamp_ms = 0;
+        uint16_t seq_num = feedback.GetBaseSequence();
+        for (const auto& packet : feedback.GetReceivedPackets()) {
+          // Insert into the vector those unreceived packets which precede this
+          // iteration's received packet.
+          for (; seq_num != packet.sequence_number(); ++seq_num) {
+            PacketFeedback packet_feedback(PacketFeedback::kNotReceived, seq_num);
+            // Note: Element not removed from history because it might be reported
+            // as received by another feedback.
+            if (!send_time_history_.GetFeedback(&packet_feedback, false))
+              ++failed_lookups;
+            if (packet_feedback.local_net_id == local_net_id_ &&
+                packet_feedback.remote_net_id == remote_net_id_) {
+              packet_feedback_vector.push_back(packet_feedback);
+            }
+          }
+
+          // Handle this iteration's received packet.
+          offset_us += packet.delta_us();
+          timestamp_ms = current_offset_ms_ + (offset_us / 1000);
+          PacketFeedback packet_feedback(timestamp_ms, packet.sequence_number());
+          if (!send_time_history_.GetFeedback(&packet_feedback, true))
+            ++failed_lookups;
+          if (packet_feedback.local_net_id == local_net_id_ &&
+              packet_feedback.remote_net_id == remote_net_id_) {
+            packet_feedback_vector.push_back(packet_feedback);
+          }
+
+          ++seq_num;
+        }
+
+        if (failed_lookups > 0) {
+//          RTC_LOG(LS_WARNING) << "Failed to lookup send time for " << failed_lookups
+//                              << " packet" << (failed_lookups > 1 ? "s" : "")
+//                              << ". Send time history too small?";
+#ifdef USE_MEDIASOUP_ClASS
+      MS_WARN_DEV("failed to lookup send time for %zu"
+                  " packet%s, send time history too small?",
+                  failed_lookups,
+                  (failed_lookups > 1 ? "s" : ""));
+#endif
+        }
+      }
+      return packet_feedback_vector;
+    }
+#endif
 std::vector<PacketFeedback>
 TransportFeedbackAdapter::GetTransportFeedbackVector() const {
   return last_packet_feedback_vector_;

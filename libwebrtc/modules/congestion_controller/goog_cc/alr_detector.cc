@@ -13,10 +13,11 @@
 
 #include "modules/congestion_controller/goog_cc/alr_detector.h"
 #include "rtc_base/numerics/safe_conversions.h"
-
-#include "DepLibUV.hpp"
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#endif
+#include "rtc_base/time_utils.h"
+#include "rtc_base/checks.h"
 #include <absl/memory/memory.h>
 #include <cstdint>
 #include <cstdio>
@@ -85,7 +86,8 @@ void AlrDetector::OnBytesSent(size_t bytes_sent, int64_t send_time_ms) {
   bool state_changed = false;
   if (alr_budget_.budget_ratio() > start_budget_level_ratio_ &&
       !alr_started_time_ms_) {
-    alr_started_time_ms_.emplace(DepLibUV::GetTimeMsInt64());
+    alr_started_time_ms_.emplace(rtc::TimeMillis());
+
     state_changed = true;
   } else if (alr_budget_.budget_ratio() < stop_budget_level_ratio_ &&
              alr_started_time_ms_) {
@@ -93,8 +95,13 @@ void AlrDetector::OnBytesSent(size_t bytes_sent, int64_t send_time_ms) {
     alr_started_time_ms_.reset();
   }
 
-  if (state_changed)
+#ifdef USE_MEDIASOUP_ClASS
+    if (state_changed)
     MS_DEBUG_DEV("state changed");
+#else
+    if (state_changed)
+        ;
+#endif
 }
 
 void AlrDetector::SetEstimatedBitrate(int bitrate_bps) {

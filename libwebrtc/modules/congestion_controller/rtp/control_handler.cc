@@ -17,9 +17,9 @@
 #include "rtc_base/numerics/safe_conversions.h"
 #include "rtc_base/numerics/safe_minmax.h"
 #include "system_wrappers/source/field_trial.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#endif
 #include <algorithm>
 #include <vector>
 
@@ -52,8 +52,10 @@ absl::optional<TargetTransferRate> CongestionControlHandler::GetUpdate() {
         last_reported_->network_estimate.round_trip_time !=
             new_outgoing.network_estimate.round_trip_time))) {
     if (encoder_paused_in_last_report_ != pause_encoding)
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_TAG(bwe, "Bitrate estimate state changed, BWE: %s",
                        ToString(log_target_rate).c_str());
+#endif
     encoder_paused_in_last_report_ = pause_encoding;
     last_reported_ = new_outgoing;
     return new_outgoing;

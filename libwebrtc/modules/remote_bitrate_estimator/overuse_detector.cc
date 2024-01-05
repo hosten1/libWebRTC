@@ -7,16 +7,18 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::OveruseDetector"
 // #define MS_LOG_DEV_LEVEL 3
-
+#else
+#endif
 #include "modules/remote_bitrate_estimator/overuse_detector.h"
 #include "modules/remote_bitrate_estimator/include/bwe_defines.h"
 #include "rtc_base/numerics/safe_minmax.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#else
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <algorithm>
@@ -107,7 +109,10 @@ BandwidthUsage OveruseDetector::Detect(double offset,
       if (offset >= prev_offset_) {
         time_over_using_ = 0;
         overuse_counter_ = 0;
+#ifdef USE_MEDIASOUP_ClASS
         MS_DEBUG_DEV("hypothesis_: BandwidthUsage::kBwOverusing");
+#else
+#endif
         hypothesis_ = BandwidthUsage::kBwOverusing;
       }
     }

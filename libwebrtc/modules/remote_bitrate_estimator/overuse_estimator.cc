@@ -7,14 +7,22 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::OveruseEstimator"
+#else
 // #define MS_LOG_DEV_LEVEL 3
+
+#endif
 
 #include "modules/remote_bitrate_estimator/overuse_estimator.h"
 #include "modules/remote_bitrate_estimator/include/bwe_defines.h"
 
+#ifdef USE_MEDIASOUP_ClASS
+
 #include "Logger.hpp"
+#else
+
+#endif
 
 #include <math.h>
 #include <string.h>
@@ -107,14 +115,15 @@ void OveruseEstimator::Update(int64_t t_delta,
   bool positive_semi_definite =
       E_[0][0] + E_[1][1] >= 0 &&
       E_[0][0] * E_[1][1] - E_[0][1] * E_[1][0] >= 0 && E_[0][0] >= 0;
-
+#ifdef  USE_MEDIASOUP_ClASS
   MS_ASSERT(positive_semi_definite, "positive_semi_definite is not true");
 
   if (!positive_semi_definite) {
     MS_ERROR("The over-use estimator's covariance matrix is no longer "
            "semi-definite.");
   }
-
+#else
+#endif
   slope_ = slope_ + K[0] * residual;
   prev_offset_ = offset_;
   offset_ = offset_ + K[1] * residual;

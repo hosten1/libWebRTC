@@ -13,9 +13,9 @@
 
 #include "modules/congestion_controller/goog_cc/probe_bitrate_estimator.h"
 #include "rtc_base/numerics/safe_conversions.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#endif
 #include <absl/memory/memory.h>
 #include <algorithm>
 
@@ -64,8 +64,9 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
   int cluster_id = packet_feedback.sent_packet.pacing_info.probe_cluster_id;
 
   //RTC_DCHECK_NE(cluster_id, PacedPacketInfo::kNotAProbe);
+#ifdef USE_MEDIASOUP_ClASS
   MS_ASSERT(cluster_id != PacedPacketInfo::kNotAProbe, "cluster_id == kNotAProbe");
-
+#endif
   EraseOldClusters(packet_feedback.receive_time);
 
   AggregatedCluster* cluster = &clusters_[cluster_id];
@@ -86,7 +87,7 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
   }
   cluster->size_total += packet_feedback.sent_packet.size;
   cluster->num_probes += 1;
-
+#ifdef USE_MEDIASOUP_ClASS
   // RTC_DCHECK_GT(
       // packet_feedback.sent_packet.pacing_info.probe_cluster_min_probes, 0);
   // RTC_DCHECK_GT(packet_feedback.sent_packet.pacing_info.probe_cluster_min_bytes,
@@ -97,7 +98,7 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
   MS_ASSERT(
     packet_feedback.sent_packet.pacing_info.probe_cluster_min_bytes > 0,
     "probe_cluster_min_bytes must be > 0");
-
+#endif
   int min_probes =
       packet_feedback.sent_packet.pacing_info.probe_cluster_min_probes *
       kMinReceivedProbesRatio;
@@ -131,6 +132,7 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
   if (send_interval <= TimeDelta::Zero() || send_interval > kMaxProbeInterval ||
       receive_interval <= TimeDelta::Zero() ||
       receive_interval > kMaxProbeInterval) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_WARN_DEV(
       "probing unsuccessful, invalid send/receive interval"
       " [cluster id:%d]"
@@ -139,7 +141,7 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
       cluster_id,
       ToString(send_interval).c_str(),
       ToString(receive_interval).c_str());
-
+#endif
     return absl::nullopt;
   }
   // Since the |send_interval| does not include the time it takes to actually
@@ -158,6 +160,7 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
 
   double ratio = receive_rate / send_rate;
   if (ratio > kMaxValidRatio) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_WARN_DEV(
       "probing unsuccessful, receive/send ratio too high"
       " [cluster id:%d, send:%s / %s = %s]"
@@ -175,10 +178,11 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
       ToString(send_rate).c_str(),
       ratio,
       kMaxValidRatio);
+#endif
 
     return absl::nullopt;
   }
-
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV(
     "probing successful"
     " [cluster id:%d]"
@@ -191,7 +195,7 @@ absl::optional<DataRate> ProbeBitrateEstimator::HandleProbeAndEstimateBitrate(
     ToString(receive_size).c_str(),
     ToString(receive_interval).c_str(),
     ToString(receive_rate).c_str());
-
+#endif
   DataRate res = std::min(send_rate, receive_rate);
   // If we're receiving at significantly lower bitrate than we were sending at,
   // it suggests that we've found the true capacity of the link. In this case,

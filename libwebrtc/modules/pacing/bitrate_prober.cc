@@ -7,14 +7,17 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-
+#ifdef USE_MEDIASOUP_ClASS
 #define MS_CLASS "webrtc::BitrateProber"
 // #define MS_LOG_DEV_LEVEL 3
-
+#else
+#endif
 #include "modules/pacing/bitrate_prober.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-
+#else
+#endif
+#include "rtc_base/checks.h"
 #include <absl/memory/memory.h>
 #include <algorithm>
 
@@ -88,13 +91,19 @@ void BitrateProber::SetEnabled(bool enable) {
   if (enable) {
     if (probing_state_ == ProbingState::kDisabled) {
       probing_state_ = ProbingState::kInactive;
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_TAG(bwe, "Bandwidth probing enabled, set to inactive");
     }
   } else {
     probing_state_ = ProbingState::kDisabled;
     MS_DEBUG_TAG(bwe, "Bandwidth probing disabled");
   }
-
+#else
+  }
+} else {
+  probing_state_ = ProbingState::kDisabled;
+}
+#endif
   // TODO: jeje
   TODO_PRINT_PROBING_STATE();
 }
@@ -121,10 +130,14 @@ void BitrateProber::OnIncomingPacket(size_t packet_size) {
 void BitrateProber::CreateProbeCluster(int bitrate_bps,
                                        int64_t now_ms,
                                        int cluster_id) {
-  // RTC_DCHECK(probing_state_ != ProbingState::kDisabled);
-  // RTC_DCHECK_GT(bitrate_bps, 0);
+
+#ifdef USE_MEDIASOUP_ClASS
   MS_ASSERT(probing_state_ != ProbingState::kDisabled, "probing disabled");
   MS_ASSERT(bitrate_bps > 0, "bitrate must be > 0");
+#else
+    RTC_DCHECK(probing_state_ != ProbingState::kDisabled);
+    RTC_DCHECK_GT(bitrate_bps, 0);
+#endif
 
   total_probe_count_++;
   while (!clusters_.empty() &&
@@ -139,18 +152,20 @@ void BitrateProber::CreateProbeCluster(int bitrate_bps,
   cluster.pace_info.probe_cluster_min_bytes =
       static_cast<int32_t>(static_cast<int64_t>(bitrate_bps) *
                            config_.min_probe_duration->ms() / 8000);
-
-  // RTC_DCHECK_GE(cluster.pace_info.probe_cluster_min_bytes, 0);
+#ifndef USE_MEDIASOUP_ClASS
+   RTC_DCHECK_GE(cluster.pace_info.probe_cluster_min_bytes, 0);
+#else
   MS_ASSERT(cluster.pace_info.probe_cluster_min_bytes >= 0, "cluster min bytes must be >= 0");
-
+#endif
   cluster.pace_info.send_bitrate_bps = bitrate_bps;
   cluster.pace_info.probe_cluster_id = cluster_id;
   clusters_.push(cluster);
-
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV("probe cluster [bitrate:%d, min bytes:%d, min probes:%d]",
                cluster.pace_info.send_bitrate_bps,
                cluster.pace_info.probe_cluster_min_bytes,
                cluster.pace_info.probe_cluster_min_probes);
+#endif
 
   // If we are already probing, continue to do so. Otherwise set it to
   // kInactive and wait for OnIncomingPacket to start the probing.
@@ -181,9 +196,11 @@ int BitrateProber::TimeUntilNextProbe(int64_t now_ms) {
   if (next_probe_time_ms_ >= 0) {
     time_until_probe_ms = next_probe_time_ms_ - now_ms;
     if (time_until_probe_ms < -config_.max_probe_delay->ms()) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_WARN_TAG(bwe, "probe delay too high [next_ms:%" PRIi64 ", now_ms:%" PRIi64 "]",
                        next_probe_time_ms_,
                        now_ms);
+#endif
       return -1;
     }
   }
@@ -192,11 +209,13 @@ int BitrateProber::TimeUntilNextProbe(int64_t now_ms) {
 }
 
 PacedPacketInfo BitrateProber::CurrentCluster() const {
-  // RTC_DCHECK(!clusters_.empty());
-  // RTC_DCHECK(probing_state_ == ProbingState::kActive);
+#ifndef USE_MEDIASOUP_ClASS
+   RTC_DCHECK(!clusters_.empty());
+   RTC_DCHECK(probing_state_ == ProbingState::kActive);
+#else
   MS_ASSERT(!clusters_.empty(), "clusters is empty");
   MS_ASSERT(probing_state_ == ProbingState::kActive, "probing not active");
-
+#endif
   return clusters_.front().pace_info;
 }
 
@@ -204,25 +223,32 @@ PacedPacketInfo BitrateProber::CurrentCluster() const {
 // a minimum of twice |kMinProbeDeltaMs| interval to allow scheduling to be
 // feasible.
 size_t BitrateProber::RecommendedMinProbeSize() const {
-  // RTC_DCHECK(!clusters_.empty());
+#ifndef USE_MEDIASOUP_ClASS
+   RTC_DCHECK(!clusters_.empty());
+#else
   MS_ASSERT(!clusters_.empty(), "clusters is empty");
-
+#endif
   return clusters_.front().pace_info.send_bitrate_bps * 2 *
          config_.min_probe_delta->ms() / (8 * 1000);
 }
 
 void BitrateProber::ProbeSent(int64_t now_ms, size_t bytes) {
-  // RTC_DCHECK(probing_state_ == ProbingState::kActive);
-  // RTC_DCHECK_GT(bytes, 0);
+#ifndef USE_MEDIASOUP_ClASS
+   RTC_DCHECK(probing_state_ == ProbingState::kActive);
+   RTC_DCHECK_GT(bytes, 0);
+#else
   MS_ASSERT(probing_state_ == ProbingState::kActive, "probing not active");
   MS_ASSERT(bytes > 0, "bytes must be > 0");
+#endif
 
   if (!clusters_.empty()) {
     ProbeCluster* cluster = &clusters_.front();
     if (cluster->sent_probes == 0) {
-      // RTC_DCHECK_EQ(cluster->time_started_ms, -1);
+#ifndef USE_MEDIASOUP_ClASS
+       RTC_DCHECK_EQ(cluster->time_started_ms, -1);
+#else
       MS_ASSERT(cluster->time_started_ms == -1, "cluster started time must not be -1");
-
+#endif
       cluster->time_started_ms = now_ms;
     }
     cluster->sent_bytes += static_cast<int>(bytes);
@@ -248,11 +274,13 @@ void BitrateProber::ProbeSent(int64_t now_ms, size_t bytes) {
 }
 
 int64_t BitrateProber::GetNextProbeTime(const ProbeCluster& cluster) {
-  // RTC_CHECK_GT(cluster.pace_info.send_bitrate_bps, 0);
-  // RTC_CHECK_GE(cluster.time_started_ms, 0);
+#ifndef USE_MEDIASOUP_ClASS
+   RTC_CHECK_GT(cluster.pace_info.send_bitrate_bps, 0);
+   RTC_CHECK_GE(cluster.time_started_ms, 0);
+#else
   MS_ASSERT(cluster.pace_info.send_bitrate_bps > 0, "cluster.pace_info.send_bitrate_bps must be > 0");
   MS_ASSERT(cluster.time_started_ms > 0, "cluster.time_started_ms must be > 0");
-
+#endif
   // Compute the time delta from the cluster start to ensure probe bitrate stays
   // close to the target bitrate. Result is in milliseconds.
   int64_t delta_ms =
