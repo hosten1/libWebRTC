@@ -10,7 +10,7 @@
 #define MS_CLASS "webrtc::FieldTrial"
 // #define MS_LOG_DEV_LEVEL 3
 
-#include "system_wrappers/source/field_trial.h"
+#include "system_wrappers/include/field_trial.h"
 
 // #include "Logger.hpp"
  #include "rtc_base/checks.h"

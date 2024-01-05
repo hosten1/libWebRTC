@@ -16,7 +16,7 @@
 #include "api/units/data_rate.h"
 #include "api/units/time_delta.h"
 #include "api/units/timestamp.h"
-#include "system_wrappers/source/field_trial.h"
+#include "system_wrappers/include/field_trial.h"
 #include "modules/congestion_controller/goog_cc/goog_cc_network_control.h"
 
 #ifdef USE_MEDIASOUP_ClASS

@@ -16,7 +16,7 @@
 #include "api/units/data_rate.h"
 #include "rtc_base/numerics/safe_conversions.h"
 #include "rtc_base/numerics/safe_minmax.h"
-#include "system_wrappers/source/field_trial.h"
+#include "system_wrappers/include/field_trial.h"
 #ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
 #endif

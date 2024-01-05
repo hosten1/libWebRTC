@@ -43,8 +43,8 @@ class RedPayloadSplitter {
   // Checks all packets in `packet_list`. Packets that are DTMF events or
   // comfort noise payloads are kept. Except that, only one single payload type
   // is accepted. Any packet with another payload type is discarded.
-//  virtual void CheckRedPayloads(PacketList* packet_list,
-//                                const DecoderDatabase& decoder_database);
+  virtual void CheckRedPayloads(PacketList* packet_list,
+                                const DecoderDatabase& decoder_database);
 };
 
 }  // namespace webrtc

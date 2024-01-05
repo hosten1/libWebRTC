@@ -15,7 +15,7 @@
 #include "modules/pacing/bitrate_prober.h"
 #include "modules/pacing/interval_budget.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-#include "system_wrappers/source/field_trial.h" // webrtc::field_trial.
+#include "system_wrappers/include/field_trial.h" // webrtc::field_trial.
 #ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
 #include "RTC/RtpPacket.hpp"

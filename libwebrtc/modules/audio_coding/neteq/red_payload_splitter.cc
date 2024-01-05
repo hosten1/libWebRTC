@@ -17,10 +17,15 @@
 #include <utility>
 #include <vector>
 
-//#include "modules/audio_coding/neteq/decoder_database.h"
+#include "modules/audio_coding/neteq/decoder_database.h"
 #include "modules/audio_coding/neteq/packet.h"
 #include "rtc_base/buffer.h"
+#ifdef USE_MEDIASOUP_ClASS
+#include "Logger.hpp"
+#else
 //#include "rtc_base/logging.h"
+#endif
+
 #include "rtc_base/numerics/safe_conversions.h"
 
 namespace webrtc {
@@ -68,7 +73,10 @@ bool RedPayloadSplitter::SplitRed(PacketList* packet_list) {
     size_t sum_length = 0;
     while (!last_block) {
       if (payload_length == 0) {
-//        RTC_LOG(LS_WARNING) << "SplitRed header too short";
+#ifdef USE_MEDIASOUP_ClASS
+  MS_DEBUG_DEV("SplitRed header too short");
+//          RTC_LOG(LS_WARNING) << "SplitRed header too short";
+#endif
         return false;
       }
       RedHeader new_header;
@@ -85,7 +93,10 @@ bool RedPayloadSplitter::SplitRed(PacketList* packet_list) {
         payload_length -= kRedLastHeaderLength;
       } else {
         if (payload_length < kRedHeaderLength) {
-//          RTC_LOG(LS_WARNING) << "SplitRed header too short";
+#ifdef USE_MEDIASOUP_ClASS
+            MS_DEBUG_DEV("SplitRed header too short");
+//            RTC_LOG(LS_WARNING) << "SplitRed header too short";
+#endif
           return false;
         }
         // Bits 8 through 21 are timestamp offset.
@@ -120,6 +131,9 @@ bool RedPayloadSplitter::SplitRed(PacketList* packet_list) {
           // The block lengths in the RED headers do not match the overall
           // packet length. Something is corrupt. Discard this and the remaining
           // payloads from this packet.
+#ifdef USE_MEDIASOUP_ClASS
+            MS_DEBUG_DEV("SplitRed length mismatch");
+#endif
 //          RTC_LOG(LS_WARNING) << "SplitRed length mismatch";
           ret = false;
           break;
@@ -139,6 +153,10 @@ bool RedPayloadSplitter::SplitRed(PacketList* packet_list) {
       // iterator `it`.
       packet_list->splice(it, std::move(new_packets));
     } else {
+#ifdef USE_MEDIASOUP_ClASS
+            MS_DEBUG_DEV("SplitRed too many blocks: %ld ",new_headers.size());
+            
+#endif
 //      RTC_LOG(LS_WARNING) << "SplitRed too many blocks: " << new_headers.size();
       ret = false;
     }
@@ -150,34 +168,34 @@ bool RedPayloadSplitter::SplitRed(PacketList* packet_list) {
   return ret;
 }
 
-//void RedPayloadSplitter::CheckRedPayloads(
-//    PacketList* packet_list,
-//    const DecoderDatabase& decoder_database) {
-//  int main_payload_type = -1;
-//  for (auto it = packet_list->begin(); it != packet_list->end(); /* */) {
-//    uint8_t this_payload_type = it->payload_type;
-//    if (decoder_database.IsRed(this_payload_type)) {
-//      it = packet_list->erase(it);
-//      continue;
-//    }
-//    if (!decoder_database.IsDtmf(this_payload_type) &&
-//        !decoder_database.IsComfortNoise(this_payload_type)) {
-//      if (main_payload_type == -1) {
-//        // This is the first packet in the list which is non-DTMF non-CNG.
-//        main_payload_type = this_payload_type;
-//      } else {
-//        if (this_payload_type != main_payload_type) {
-//          // We do not allow redundant payloads of a different type.
-//          // Remove `it` from the packet list. This operation effectively
-//          // moves the iterator `it` to the next packet in the list. Thus, we
-//          // do not have to increment it manually.
-//          it = packet_list->erase(it);
-//          continue;
-//        }
-//      }
-//    }
-//    ++it;
-//  }
-//}
+void RedPayloadSplitter::CheckRedPayloads(
+    PacketList* packet_list,
+    const DecoderDatabase& decoder_database) {
+  int main_payload_type = -1;
+  for (auto it = packet_list->begin(); it != packet_list->end(); /* */) {
+    uint8_t this_payload_type = it->payload_type;
+    if (decoder_database.IsRed(this_payload_type)) {
+      it = packet_list->erase(it);
+      continue;
+    }
+    if (!decoder_database.IsDtmf(this_payload_type) &&
+        !decoder_database.IsComfortNoise(this_payload_type)) {
+      if (main_payload_type == -1) {
+        // This is the first packet in the list which is non-DTMF non-CNG.
+        main_payload_type = this_payload_type;
+      } else {
+        if (this_payload_type != main_payload_type) {
+          // We do not allow redundant payloads of a different type.
+          // Remove `it` from the packet list. This operation effectively
+          // moves the iterator `it` to the next packet in the list. Thus, we
+          // do not have to increment it manually.
+          it = packet_list->erase(it);
+          continue;
+        }
+      }
+    }
+    ++it;
+  }
+}
 
 }  // namespace webrtc

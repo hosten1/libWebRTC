@@ -16,7 +16,7 @@
 #include "modules/congestion_controller/rtp/transport_feedback_adapter.h"
 #include "api/units/timestamp.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-#include "system_wrappers/source/field_trial.h"
+#include "system_wrappers/include/field_trial.h"
 #include "mediasoup_helpers.h"
 #ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"

@@ -116,7 +116,7 @@
       'libwebrtc/common_video/generic_frame_descriptor/generic_frame_info.cc',
       'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_extension.cc',
       # C++ include files.
-      'libwebrtc/system_wrappers/source/field_trial.h',
+      'libwebrtc/system_wrappers/include/field_trial.h',
       'libwebrtc/rtc_base/rate_statistics.h',
       'libwebrtc/rtc_base/experiments/field_trial_parser.h',
       'libwebrtc/rtc_base/experiments/field_trial_units.h',
