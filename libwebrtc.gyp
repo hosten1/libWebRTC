@@ -109,12 +109,29 @@
       'libwebrtc/api/rtp_headers.cc',
       'libwebrtc/api/rtp_parameters.cc',
       'libwebrtc/api/audio_codecs/audio_decoder.cc',
-   
       'libwebrtc/api/video/hdr_metadata.cc',
       'libwebrtc/api/video/video_content_type.cc',
       'libwebrtc/api/video/video_timing.cc',
       'libwebrtc/common_video/generic_frame_descriptor/generic_frame_info.cc',
       'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_extension.cc',
+      # lym red decode database
+      'libwebrtc/api/audio_codecs/audio_codec_pair_id.cc',
+      'libwebrtc/api/rtp_packet_info.cc',
+      'libwebrtc/common_audio/signal_processing/dot_product_with_scale.cc',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft_mips.cc',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft.cc',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_256/fft4g.cc',
+      'libwebrtc/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c',
+      'libwebrtc/modules/audio_coding/codecs/cng/webrtc_cng.cc',
+      'libwebrtc/modules/audio_coding/neteq/decoder_database.cc',
+      'libwebrtc/rtc_base/strings/audio_format_to_string.cc',
+      'libwebrtc/system_wrappers/source/cpu_features.cc',
+      'libwebrtc/system_wrappers/source/metrics.cc',
+      'libwebrtc/system_wrappers/source/rtp_to_ntp_estimator.cc',
+
+      # lym red decode database end
+       
       # C++ include files.
       'libwebrtc/system_wrappers/include/field_trial.h',
       'libwebrtc/rtc_base/rate_statistics.h',
@@ -296,6 +313,28 @@
       'libwebrtc/api/video/video_timing.h',
       'libwebrtc/api/video/video_frame_marking.h',
       'libwebrtc/api/video/video_rotation.h',
+      # lym red decode database
+      'libwebrtc/api/audio_codecs/audio_codec_pair_id.h',
+      'libwebrtc/api/audio_codecs/audio_decoder_factory.h',
+      'libwebrtc/api/rtp_packet_info.h',
+      'libwebrtc/api/rtp_packet_infos.h',
+      'libwebrtc/common_audio/signal_processing/include/signal_processing_library.h',
+      'libwebrtc/common_audio/signal_processing/include/spl_inl.h',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft.h',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_common.h',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_neon_sse2.h',
+      'libwebrtc/common_audio/third_party/ooura/fft_size_256/fft4g.h',
+      'libwebrtc/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.h',
+      'libwebrtc/modules/audio_coding/codecs/cng/webrtc_cng.h',
+      'libwebrtc/modules/audio_coding/neteq/decoder_database.h',
+      'libwebrtc/rtc_base/numerics/moving_median_filter.h',
+      'libwebrtc/rtc_base/strings/audio_format_to_string.h',
+      'libwebrtc/rtc_base/compile_assert_c.h',
+      'libwebrtc/system_wrappers/include/cpu_features_wrapper.h',
+      'libwebrtc/system_wrappers/include/event_wrapper.h',
+      'libwebrtc/system_wrappers/include/metrics.h',
+      'libwebrtc/system_wrappers/include/rtp_to_ntp_estimator.h',
+      # lym red decode database end
     ],
     'include_dirs':
     [
