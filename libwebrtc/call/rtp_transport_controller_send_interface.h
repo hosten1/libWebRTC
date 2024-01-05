@@ -11,6 +11,12 @@
 #ifndef CALL_RTP_TRANSPORT_CONTROLLER_SEND_INTERFACE_H_
 #define CALL_RTP_TRANSPORT_CONTROLLER_SEND_INTERFACE_H_
 
+#ifdef __linux__
+#ifndef USE_MEDIASOUP_ClASS
+#define USE_MEDIASOUP_ClASS
+#endif
+#endif
+
 #include "api/bitrate_constraints.h"
 #include "api/transport/bitrate_settings.h"
 // #include "call/rtp_config.h"

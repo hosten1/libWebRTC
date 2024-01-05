@@ -75,8 +75,11 @@ class RemoteBitrateEstimatorAbsSendTime : public RemoteBitrateEstimator {
   RemoteBitrateEstimatorAbsSendTime(RemoteBitrateObserver* observer,Clock* clock);
   ~RemoteBitrateEstimatorAbsSendTime();
 #ifdef USE_MEDIASOUP_ClASS
-  void IncomingPacket(
-      int64_t arrivalTimeMs, size_t payloadSize, const RTC::RtpPacket& packet, uint32_t absSendTime) override;
+    void IncomingPacket(
+        int64_t arrival_time_ms,
+        size_t payload_size,
+        const RTC::RtpPacket& packet,
+        uint32_t send_time_24bits)override;
 #else
     void IncomingPacket(int64_t arrival_time_ms,
                         size_t payload_size,

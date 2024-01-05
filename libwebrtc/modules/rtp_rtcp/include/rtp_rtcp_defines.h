@@ -11,6 +11,12 @@
 #ifndef MODULES_RTP_RTCP_INCLUDE_RTP_RTCP_DEFINES_H_
 #define MODULES_RTP_RTCP_INCLUDE_RTP_RTCP_DEFINES_H_
 
+#ifdef __linux__
+#ifndef USE_MEDIASOUP_ClASS
+#define USE_MEDIASOUP_ClASS
+#endif
+#endif
+
 #include <stddef.h>
 #include <list>
 #include <vector>
@@ -327,9 +333,10 @@ class TransportFeedbackObserver {
   virtual ~TransportFeedbackObserver() {}
 
   virtual void OnAddPacket(const RtpPacketSendInfo& packet_info) = 0;
-  virtual void OnTransportFeedback(const rtcp::TransportFeedback& feedback) = 0;
 #ifdef USE_MEDIASOUP_ClASS
   virtual void OnTransportFeedback(const RTC::RTCP::FeedbackRtpTransportPacket& feedback) = 0;
+#else
+ virtual void OnTransportFeedback(const rtcp::TransportFeedback& feedback) = 0;
 #endif
 
 };

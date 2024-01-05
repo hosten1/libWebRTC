@@ -1400,18 +1400,18 @@
 		1B6774392B463CF60045883A /* remote_bitrate_estimator */ = {
 			isa = PBXGroup;
 			children = (
-				1B67743A2B463CF60045883A /* overuse_detector.cc */,
-				1B67743B2B463CF60045883A /* overuse_estimator.cc */,
-				1B67743C2B463CF60045883A /* inter_arrival.h */,
-				1B67743D2B463CF60045883A /* include */,
 				1B6774402B463CF60045883A /* aimd_rate_control.cc */,
-				1B6774412B463CF60045883A /* remote_bitrate_estimator_abs_send_time.cc */,
-				1B6774422B463CF60045883A /* overuse_detector.h */,
-				1B6774432B463CF60045883A /* inter_arrival.cc */,
-				1B6774442B463CF60045883A /* remote_bitrate_estimator_abs_send_time.h */,
-				1B6774452B463CF60045883A /* overuse_estimator.h */,
 				1B6774462B463CF60045883A /* aimd_rate_control.h */,
 				1B6774472B463CF60045883A /* bwe_defines.cc */,
+				1B67743D2B463CF60045883A /* include */,
+				1B6774432B463CF60045883A /* inter_arrival.cc */,
+				1B67743C2B463CF60045883A /* inter_arrival.h */,
+				1B67743A2B463CF60045883A /* overuse_detector.cc */,
+				1B6774422B463CF60045883A /* overuse_detector.h */,
+				1B67743B2B463CF60045883A /* overuse_estimator.cc */,
+				1B6774452B463CF60045883A /* overuse_estimator.h */,
+				1B6774412B463CF60045883A /* remote_bitrate_estimator_abs_send_time.cc */,
+				1B6774442B463CF60045883A /* remote_bitrate_estimator_abs_send_time.h */,
 			);
 			path = remote_bitrate_estimator;
 			sourceTree = "<group>";
@@ -1437,12 +1437,12 @@
 		1B6774492B463CF60045883A /* include */ = {
 			isa = PBXGroup;
 			children = (
-				1B67744A2B463CF60045883A /* rtp_rtcp_defines.cc */,
+				1B67744D2B463CF60045883A /* receive_statistics.h */,
+				1B67744F2B463CF60045883A /* rtp_cvo.h */,
 				1B67744B2B463CF60045883A /* rtp_header_extension_map.h */,
 				1B67744C2B463CF60045883A /* rtp_header_parser.h */,
-				1B67744D2B463CF60045883A /* receive_statistics.h */,
+				1B67744A2B463CF60045883A /* rtp_rtcp_defines.cc */,
 				1B67744E2B463CF60045883A /* rtp_rtcp_defines.h */,
-				1B67744F2B463CF60045883A /* rtp_cvo.h */,
 			);
 			path = include;
 			sourceTree = "<group>";
