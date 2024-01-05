@@ -43,7 +43,7 @@ class ComfortNoiseDecoder {
   // currently 640 bytes (equalling 10ms at 64kHz).
   // TODO(ossu): Specify better limits for the size of out_data. Either let it
   //             be unbounded or limit to 10ms in the current sample rate.
-  bool Generate(rtc::ArrayView<int16_t> out_data, bool new_period);
+//  bool Generate(rtc::ArrayView<int16_t> out_data, bool new_period);
 
  private:
   uint32_t dec_seed_;
@@ -58,41 +58,41 @@ class ComfortNoiseDecoder {
   int16_t dec_used_scale_factor_;   /* Q29 */
 };
 
-class ComfortNoiseEncoder {
- public:
-  // Creates a comfort noise encoder.
-  // |fs| selects sample rate: 8000 for narrowband or 16000 for wideband.
-  // |interval| sets the interval at which to generate SID data (in ms).
-  // |quality| selects the number of refl. coeffs. Maximum allowed is 12.
-  ComfortNoiseEncoder(int fs, int interval, int quality);
-  ~ComfortNoiseEncoder() = default;
-
-  ComfortNoiseEncoder(const ComfortNoiseEncoder&) = delete;
-  ComfortNoiseEncoder& operator=(const ComfortNoiseEncoder&) = delete;
-
-  // Resets the comfort noise encoder to its initial state.
-  // Parameters are set as during construction.
-  void Reset(int fs, int interval, int quality);
-
-  // Analyzes background noise from |speech| and appends coefficients to
-  // |output|.  Returns the number of coefficients generated.  If |force_sid| is
-  // true, a SID frame is forced and the internal sid interval counter is reset.
-  // Will fail if the input size is too large (> 640 samples, see
-  // ComfortNoiseDecoder::Generate).
-  size_t Encode(rtc::ArrayView<const int16_t> speech,
-                bool force_sid,
-                rtc::Buffer* output);
-
- private:
-  size_t enc_nrOfCoefs_;
-  int enc_sampfreq_;
-  int16_t enc_interval_;
-  int16_t enc_msSinceSid_;
-  int32_t enc_Energy_;
-  int16_t enc_reflCoefs_[WEBRTC_CNG_MAX_LPC_ORDER + 1];
-  int32_t enc_corrVector_[WEBRTC_CNG_MAX_LPC_ORDER + 1];
-  uint32_t enc_seed_;
-};
+//class ComfortNoiseEncoder {
+// public:
+//  // Creates a comfort noise encoder.
+//  // |fs| selects sample rate: 8000 for narrowband or 16000 for wideband.
+//  // |interval| sets the interval at which to generate SID data (in ms).
+//  // |quality| selects the number of refl. coeffs. Maximum allowed is 12.
+//  ComfortNoiseEncoder(int fs, int interval, int quality);
+//  ~ComfortNoiseEncoder() = default;
+//
+//  ComfortNoiseEncoder(const ComfortNoiseEncoder&) = delete;
+//  ComfortNoiseEncoder& operator=(const ComfortNoiseEncoder&) = delete;
+//
+//  // Resets the comfort noise encoder to its initial state.
+//  // Parameters are set as during construction.
+//  void Reset(int fs, int interval, int quality);
+//
+//  // Analyzes background noise from |speech| and appends coefficients to
+//  // |output|.  Returns the number of coefficients generated.  If |force_sid| is
+//  // true, a SID frame is forced and the internal sid interval counter is reset.
+//  // Will fail if the input size is too large (> 640 samples, see
+//  // ComfortNoiseDecoder::Generate).
+//  size_t Encode(rtc::ArrayView<const int16_t> speech,
+//                bool force_sid,
+//                rtc::Buffer* output);
+//
+// private:
+//  size_t enc_nrOfCoefs_;
+//  int enc_sampfreq_;
+//  int16_t enc_interval_;
+//  int16_t enc_msSinceSid_;
+//  int32_t enc_Energy_;
+//  int16_t enc_reflCoefs_[WEBRTC_CNG_MAX_LPC_ORDER + 1];
+//  int32_t enc_corrVector_[WEBRTC_CNG_MAX_LPC_ORDER + 1];
+//  uint32_t enc_seed_;
+//};
 
 }  // namespace webrtc
 
