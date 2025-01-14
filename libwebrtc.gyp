@@ -2,7 +2,10 @@
   'target_defaults': {
     'dependencies':
     [
-      # 'deps/abseil-cpp/abseil-cpp.gyp:abseil'
+      '../jsoncpp/jsoncpp.gyp:jsoncpp',
+      'deps/abseil-cpp/abseil-cpp.gyp:abseil',
+      '../libuv/uv.gyp:libuv',
+      '../openssl/openssl.gyp:openssl'
     ],
     'direct_dependent_settings': {
       'include_dirs':
@@ -68,7 +71,7 @@
       'libwebrtc/api/video/color_space.cc',
       'libwebrtc/api/audio_codecs/audio_format.cc',
       # red sorce end
-     # lym pacer
+       # lym pacer
      'libwebrtc/rtc_base/critical_section.cc',
      'libwebrtc/rtc_base/platform_thread_types.cc',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet.cc',
@@ -109,6 +112,7 @@
       'libwebrtc/api/rtp_headers.cc',
       'libwebrtc/api/rtp_parameters.cc',
       'libwebrtc/api/audio_codecs/audio_decoder.cc',
+   
       'libwebrtc/api/video/hdr_metadata.cc',
       'libwebrtc/api/video/video_content_type.cc',
       'libwebrtc/api/video/video_timing.cc',
@@ -161,7 +165,7 @@
       'libwebrtc/modules/video_coding/include/video_codec_interface.cc',
       'libwebrtc/rtc_base/synchronization/sequence_checker.cc',
       # lym fec end
-       
+
       # C++ include files.
       'libwebrtc/system_wrappers/include/field_trial.h',
       'libwebrtc/rtc_base/rate_statistics.h',
@@ -210,13 +214,13 @@
       'libwebrtc/modules/rtp_rtcp/source/rtp_dependency_descriptor_writer.h',
       #lym end red
       # lym pacer
-     'libwebrtc/rtc_base/critical_section.h',
+      'libwebrtc/rtc_base/critical_section.h',
      'libwebrtc/rtc_base/platform_thread_types.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/common_header.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.h',
      'libwebrtc/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.h',
-     'libwebrtc/modules/rtp_rtcp/source/rtp_packet_history.h',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_packet_history.h',
      'libwebrtc/modules/rtp_rtcp/source/rtp_packet_to_send.h',
       # lyn pacer end
       'libwebrtc/modules/pacing/interval_budget.h',
@@ -231,7 +235,7 @@
       'libwebrtc/modules/remote_bitrate_estimator/remote_bitrate_estimator_abs_send_time.h',
       'libwebrtc/modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h',
       'libwebrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h',
-     #'libwebrtc/modules/rtp_rtcp/source/rtp_packet/transport_feedback.h',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_packet/transport_feedback.h',
       'libwebrtc/modules/bitrate_controller/loss_based_bandwidth_estimation.h',
       'libwebrtc/modules/bitrate_controller/send_side_bandwidth_estimation.h',
       'libwebrtc/modules/congestion_controller/goog_cc/bitrate_estimator.h',
@@ -348,7 +352,6 @@
       'libwebrtc/api/audio_codecs/audio_decoder_factory.h',
       'libwebrtc/api/rtp_packet_info.h',
       'libwebrtc/api/rtp_packet_infos.h',
-      #'libwebrtc/common_audio/signal_processing/include/signal_processing_library.h',
       'libwebrtc/common_audio/signal_processing/include/spl_inl.h',
       'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft.h',
       'libwebrtc/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_common.h',
@@ -409,6 +412,22 @@
       'libwebrtc/rtc_base/numerics/running_statistics.h',
       'libwebrtc/rtc_base/synchronization/sequence_checker.h',
       # lym fec end
+      # lym red encode
+      'libwebrtc/api/audio_codecs/audio_encoder.h',
+      'libwebrtc/api/audio_codecs/audio_encoder.cc',
+      'libwebrtc/api/call/audio_sink.h',
+      'libwebrtc/api/call/bitrate_allocator.h',
+      'libwebrtc/api/field_trials_view.h',
+      'libwebrtc/modules/audio_coding/codecs/red/audio_encoder_copy_red.h',
+      'libwebrtc/modules/audio_coding/codecs/red/audio_encoder_copy_red.cc',
+      'libwebrtc/rtc_base/synchronization/mutex.h',
+      'libwebrtc/rtc_base/synchronization/mutex_abseil.h',
+      'libwebrtc/rtc_base/synchronization/mutex_critical_section.h',
+      'libwebrtc/rtc_base/synchronization/mutex_pthread.h',
+      'libwebrtc/rtc_base/system/file_wrapper.h',
+      'libwebrtc/rtc_base/system/file_wrapper.cc',
+      'libwebrtc/rtc_base/system/no_unique_address.h',
+            # lym red encode end
     ],
     'include_dirs':
     [
@@ -429,23 +448,28 @@
       ['OS != "win"', {
         'defines': [
           'WEBRTC_POSIX',
+          # 'NDEBUG',
         ],
       }],
       [ 'OS == "mac"', {
         'defines': [
           'WEBRTC_MAC',
+          # 'NDEBUG',
         ],
       }],
       [
         'OS == "linux"', {
             'defines': [
                 'WEBRTC_LINUX',
+                'USE_MEDIASOUP_ClASS',
+                # 'NDEBUG',
             ],
         },
       ],
      ['OS =="win"', {
         'defines': [
           'WEBRTC_WIN',
+          # 'NDEBUG',
         ],
       }],
       # Platform-specifics.
@@ -466,14 +490,7 @@
   [
     {
       'target_name': 'libwebrtc',
-      'type': 'static_library',
-      'include_dirs': [   # 指定libmath.a头文件路径
-        'deps/abseil-cpp/abseil-cpp'
-      ],
-      'libraries': [      # 指定链接的头文件路径和名称
-        'deps/abseil-cpp/abseil.a'
-      ]
+      'type': 'static_library'
     }
-    
   ]
 }
