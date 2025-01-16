@@ -83,7 +83,8 @@ class AudioEncoderCopyRed final : public AudioEncoder {
   absl::optional<std::pair<TimeDelta, TimeDelta>> GetFrameLengthRange() const  override;
   rtc::ArrayView<std::unique_ptr<AudioEncoder>> ReclaimContainedEncoders()
       override;
-
+    /// Mediasoup 适配改造
+ void  setEncodeInfo(EncodedInfo info);
  protected:
   EncodedInfo EncodeImpl(uint32_t rtp_timestamp,
                          rtc::ArrayView<const int16_t> audio,
@@ -95,6 +96,9 @@ class AudioEncoderCopyRed final : public AudioEncoder {
   size_t max_packet_length_;
   int red_payload_type_;
   std::list<std::pair<EncodedInfo, rtc::Buffer>> redundant_encodings_;
+    
+    EncodedInfo en_info_;
+
 };
 
 }  // namespace webrtc

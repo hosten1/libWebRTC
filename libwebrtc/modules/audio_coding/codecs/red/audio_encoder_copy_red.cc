@@ -131,6 +131,102 @@ int AudioEncoderCopyRed::GetTargetBitrate() const {
   return speech_encoder_->GetTargetBitrate();
 }
 
+void AudioEncoderCopyRed::setEncodeInfo(EncodedInfo info){
+    if (primary_encoded_.empty())
+        en_info_ = info;
+}
+
+/// 为了适配meidasoup这里需要改造
+
+AudioEncoder::EncodedInfo AudioEncoderCopyRed::EncodeImpl(
+    uint32_t rtp_timestamp,
+    rtc::ArrayView<const int16_t> audio,
+    rtc::Buffer* encoded) {
+  primary_encoded_.Clear();
+//  EncodedInfo info =
+//      speech_encoder_->Encode(rtp_timestamp, audio, &primary_encoded_);
+//  RTC_CHECK(info.redundant.empty()) << "Cannot use nested redundant encoders.";
+//  RTC_DCHECK_EQ(primary_encoded_.size(), info.encoded_bytes);
+
+//  if (info.encoded_bytes == 0 || info.encoded_bytes >= kRedMaxPacketSize) {
+//    return info;
+//  }
+//  RTC_DCHECK_GT(max_packet_length_, info.encoded_bytes);
+  EncodedInfo en_info;
+  size_t info_encoded_bytes = audio.size();
+  size_t header_length_bytes = kRedLastHeaderLength;
+  size_t bytes_available = max_packet_length_ - info_encoded_bytes;
+    // encoded_timestamp 可以使用rtp_timestamp
+  auto it = redundant_encodings_.begin();
+
+  // Determine how much redundancy we can fit into our packet by
+  // iterating forward. This is determined both by the length as well
+  // as the timestamp difference. The latter can occur with opus DTX which
+  // has timestamp gaps of 400ms which exceeds REDs timestamp delta field size.
+  for (; it != redundant_encodings_.end(); it++) {
+    if (bytes_available < kRedHeaderLength + it->first.encoded_bytes) {
+      break;
+    }
+    if (it->first.encoded_bytes == 0) {
+      break;
+    }
+    if (rtp_timestamp - it->first.encoded_timestamp >= kRedMaxTimestampDelta) {
+      break;
+    }
+    bytes_available -= kRedHeaderLength + it->first.encoded_bytes;
+    header_length_bytes += kRedHeaderLength;
+  }
+
+  // Allocate room for RFC 2198 header.
+  encoded->SetSize(header_length_bytes);
+
+  // Iterate backwards and append the data.
+  size_t header_offset = 0;
+  while (it-- != redundant_encodings_.begin()) {
+    encoded->AppendData(it->second);
+
+    const uint32_t timestamp_delta =
+      en_info.encoded_timestamp - it->first.encoded_timestamp;
+    encoded->data()[header_offset] = it->first.payload_type | 0x80;
+    rtc::SetBE16(static_cast<uint8_t*>(encoded->data()) + header_offset + 1,
+                 (timestamp_delta << 2) | (it->first.encoded_bytes >> 8));
+    encoded->data()[header_offset + 3] = it->first.encoded_bytes & 0xff;
+    header_offset += kRedHeaderLength;
+    en_info.redundant.push_back(it->first);
+  }
+
+  // `info` will be implicitly cast to an EncodedInfoLeaf struct, effectively
+  // discarding the (empty) vector of redundant information. This is
+  // intentional.
+  if (header_length_bytes > kRedHeaderLength) {
+      en_info.redundant.push_back(en_info);
+//    RTC_DCHECK_EQ(en_info.speech,
+//                  en_info.redundant[info.redundant.size() - 1].speech);
+  }
+
+  encoded->AppendData(primary_encoded_);
+  RTC_DCHECK_EQ(header_offset, header_length_bytes - 1);
+  encoded->data()[header_offset] = en_info.payload_type;
+
+  // Shift the redundant encodings.
+  auto rit = redundant_encodings_.rbegin();
+  for (auto next = std::next(rit); next != redundant_encodings_.rend();
+       rit++, next = std::next(rit)) {
+    rit->first = next->first;
+    rit->second.SetData(next->second);
+  }
+  it = redundant_encodings_.begin();
+  if (it != redundant_encodings_.end()) {
+    it->first = en_info_;
+    it->second.SetData(primary_encoded_);
+  }
+
+  // Update main EncodedInfo.
+    en_info_.payload_type = red_payload_type_;
+    en_info_.encoded_bytes = encoded->size();
+  return en_info_;
+}
+/* 原来的方法
 AudioEncoder::EncodedInfo AudioEncoderCopyRed::EncodeImpl(
     uint32_t rtp_timestamp,
     rtc::ArrayView<const int16_t> audio,
@@ -216,7 +312,7 @@ AudioEncoder::EncodedInfo AudioEncoderCopyRed::EncodeImpl(
   info.payload_type = red_payload_type_;
   info.encoded_bytes = encoded->size();
   return info;
-}
+}*/
 
 void AudioEncoderCopyRed::Reset() {
   speech_encoder_->Reset();
