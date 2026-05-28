@@ -31,8 +31,12 @@ namespace webrtc {
 // set bps = 0 to signal an explicit "turn off" signal.
 class RTC_EXPORT VideoBitrateAllocation {
  public:
+#if defined(_WIN32)
+  static constexpr uint32_t kMaxBitrateBps = 0xFFFFFFFF;
+#else
   static constexpr uint32_t kMaxBitrateBps =
       std::numeric_limits<uint32_t>::max();
+#endif
   VideoBitrateAllocation();
 
   bool SetBitrate(size_t spatial_index,

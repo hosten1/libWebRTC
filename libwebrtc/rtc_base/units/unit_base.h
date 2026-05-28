@@ -209,12 +209,21 @@ class UnitBase {
   template <class RelativeUnit_T>
   friend class RelativeUnit;
 
+#if defined(_WIN32)
+  static inline constexpr int64_t PlusInfinityVal() {
+    return 9223372036854775807LL;
+  }
+  static inline constexpr int64_t MinusInfinityVal() {
+    return -9223372036854775807LL - 1;
+  }
+#else
   static inline constexpr int64_t PlusInfinityVal() {
     return std::numeric_limits<int64_t>::max();
   }
   static inline constexpr int64_t MinusInfinityVal() {
     return std::numeric_limits<int64_t>::min();
   }
+#endif
 
   Unit_T& AsSubClassRef() { return reinterpret_cast<Unit_T&>(*this); }
   constexpr const Unit_T& AsSubClassRef() const {

@@ -191,8 +191,16 @@ class CopyOnWriteBuffer {
       return;
     }
 
-    CloneDataIfReferenced(
-        std::max(buffer_->capacity(), buffer_->size() + size));
+#if defined(_WIN32)
+    size_t new_capacity = buffer_->capacity();
+    size_t required_size = buffer_->size() + size;
+    if (required_size > new_capacity) {
+      new_capacity = required_size;
+    }
+    CloneDataIfReferenced(new_capacity);
+#else
+    CloneDataIfReferenced(std::max(buffer_->capacity(), buffer_->size() + size));
+#endif
     buffer_->AppendData(data, size);
     RTC_DCHECK(IsConsistent());
   }

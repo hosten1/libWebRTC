@@ -26,7 +26,11 @@ struct VideoSendTiming {
                         // Used on send-side only.
     kTriggeredByTimer = 1 << 0,  // Frame marked for tracing by periodic timer.
     kTriggeredBySize = 1 << 1,   // Frame marked for tracing due to size.
+#if defined(_WIN32)
+    kInvalid = 0xFF  // Invalid, ignore!
+#else
     kInvalid = std::numeric_limits<uint8_t>::max()  // Invalid, ignore!
+#endif
   };
 
   // Offsets of the fields in the RTP header extension, counting from the first
