@@ -74,5 +74,4 @@ void SetCurrentThreadName(const char* name) {
   pthread_setname_np(name);
 #endif
 }
-
 }  // namespace rtc

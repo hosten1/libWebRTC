@@ -18,3 +18,4 @@ The file `libwebrtc/mediasoup_helpers.h` includes some utilities to plug mediaso
   static Clock* GetRealTimeClock();
  ```
  其实现方法根据不同平台创建不同的Clock；
+ # macos 平台
