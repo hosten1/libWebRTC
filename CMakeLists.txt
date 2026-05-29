@@ -86,7 +86,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_win.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_wrapper.cc
     ${WEBRTC_SRC_DIR}/rtc_base/crc32.cc
     ${WEBRTC_SRC_DIR}/rtc_base/system/file_wrapper.cc
@@ -292,8 +291,8 @@ endif()
 if(WEBRTC_BUILD_FEC)
     target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_FEC)
 endif()
-if(WEBRTC_BUILD_GCC_ONLY)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_GCC_ONLY)
+if(WEBRTC_BUILD_GCC)
+    target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_GCC)
 endif()
 if(WEBRTC_BUILD_VIDEO)
     target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_VIDEO)
