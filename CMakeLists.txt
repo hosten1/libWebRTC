@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
 project(libwebrtc LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    add_compile_options(/utf-8 /permissive-)
+ add_compile_options(
+        /utf-8
+        /Zc:__cplusplus
+    )
 else()
     add_compile_options(-finput-charset=UTF-8)
 endif()
@@ -119,13 +122,14 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/system_wrappers/source/rtp_to_ntp_estimator.cc
 )
 
-include_directories(
+add_library(libwebrtc STATIC ${WEBRTC_SOURCES})
+
+
+target_include_directories(libwebrtc PRIVATE
     ${PROJECT_SOURCE_DIR}
     ${WEBRTC_SRC_DIR}
     ${DEPS_DIR}/abseil-cpp/abseil-cpp
 )
-
-add_library(libwebrtc STATIC ${WEBRTC_SOURCES})
 
 if(MSVC)
     target_compile_options(libwebrtc PRIVATE /W0)
@@ -138,7 +142,12 @@ if(APPLE)
 elseif(UNIX)
     target_compile_definitions(libwebrtc PRIVATE WEBRTC_POSIX WEBRTC_LINUX USE_MEDIASOUP_ClASS)
 elseif(WIN32)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_WIN)
+    target_compile_definitions(libwebrtc PRIVATE
+        WEBRTC_WIN
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+        _CRT_SECURE_NO_WARNINGS
+    )
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
@@ -148,8 +157,13 @@ else()
 endif()
 
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
+
+
 target_link_libraries(libwebrtc PRIVATE
-    abseil
+    absl_strings
+    absl_base
+    absl_optional
+    absl_flat_hash_map
 )
 
 set_target_properties(libwebrtc PROPERTIES OUTPUT_NAME webrtc)

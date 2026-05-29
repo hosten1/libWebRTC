@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2011 The WebRTC project authors. All Rights Reserved.
+ *  Copyright (c) 2017 The WebRTC project authors. All Rights Reserved.
  *
  *  Use of this source code is governed by a BSD-style license
  *  that can be found in the LICENSE file in the root of the source
@@ -11,28 +11,37 @@
 #ifndef MODULES_INCLUDE_MODULE_COMMON_TYPES_PUBLIC_H_
 #define MODULES_INCLUDE_MODULE_COMMON_TYPES_PUBLIC_H_
 
-#include <stdint.h>
-
-#include <memory>
+#include <limits>
 
 #include "absl/types/optional.h"
 
-#if !defined(_WIN32)
-#include <limits>
-#endif
-
 namespace webrtc {
+
+template <typename U>
+inline bool IsNewer(U value, U prev_value) {
+  static_assert(!std::numeric_limits<U>::is_signed, "U must be unsigned");
+  // kBreakpoint is the half-way mark for the type U. For instance, for a
+  // uint16_t it will be 0x8000, and for a uint32_t, it will be 0x8000000.
+  constexpr U kBreakpoint = (std::numeric_limits<U>::max() >> 1) + 1;
+  // Distinguish between elements that are exactly kBreakpoint apart.
+  // If t1>t2 and |t1-t2| = kBreakpoint: IsNewer(t1,t2)=true,
+  // IsNewer(t2,t1)=false
+  // rather than having IsNewer(t1,t2) = IsNewer(t2,t1) = false.
+  if (value - prev_value == kBreakpoint) {
+    return value > prev_value;
+  }
+  return value != prev_value &&
+         static_cast<U>(value - prev_value) < kBreakpoint;
+}
 
 // Utility class to unwrap a number to a larger type. The numbers will never be
 // unwrapped to a negative value.
 template <typename U>
 class Unwrapper {
-#if !defined(_WIN32)
   static_assert(!std::numeric_limits<U>::is_signed, "U must be unsigned");
   static_assert(std::numeric_limits<U>::max() <=
                     std::numeric_limits<uint32_t>::max(),
                 "U must not be wider than 32 bits");
-#endif
 
  public:
   // Get the unwrapped value, but don't update the internal state.
@@ -40,13 +49,8 @@ class Unwrapper {
     if (!last_value_)
       return value;
 
-#if defined(_WIN32)
-    constexpr int64_t kMaxPlusOne =
-        static_cast<int64_t>(static_cast<U>(-1)) + 1;
-#else
     constexpr int64_t kMaxPlusOne =
         static_cast<int64_t>(std::numeric_limits<U>::max()) + 1;
-#endif
 
     U cropped_last = static_cast<U>(*last_value_);
     int64_t delta = value - cropped_last;
@@ -73,30 +77,35 @@ class Unwrapper {
   }
 
  private:
-#if defined(_WIN32)
-  bool IsNewer(U value, U prev_value) const {
-    constexpr U kMaxValue = static_cast<U>(-1);
-    constexpr U kHalfMaxValue = kMaxValue / 2 + 1;
-    return (value != prev_value) &&
-           ((value > prev_value && value - prev_value <= kHalfMaxValue) ||
-            (value < prev_value && prev_value - value > kHalfMaxValue));
-  }
-#else
-  bool IsNewer(U value, U prev_value) const {
-    constexpr U kMaxValue = std::numeric_limits<U>::max();
-    constexpr U kHalfMaxValue = kMaxValue / 2 + 1;
-    return (value != prev_value) &&
-           ((value > prev_value && value - prev_value <= kHalfMaxValue) ||
-            (value < prev_value && prev_value - value > kHalfMaxValue));
-  }
-#endif
-
   absl::optional<int64_t> last_value_;
 };
 
 using SequenceNumberUnwrapper = Unwrapper<uint16_t>;
 using TimestampUnwrapper = Unwrapper<uint32_t>;
 
-}  // namespace webrtc
+// NB: Doesn't fulfill strict weak ordering requirements.
+//     Mustn't be used as std::map Compare function.
+inline bool IsNewerSequenceNumber(uint16_t sequence_number,
+                                  uint16_t prev_sequence_number) {
+  return IsNewer(sequence_number, prev_sequence_number);
+}
 
+// NB: Doesn't fulfill strict weak ordering requirements.
+//     Mustn't be used as std::map Compare function.
+inline bool IsNewerTimestamp(uint32_t timestamp, uint32_t prev_timestamp) {
+  return IsNewer(timestamp, prev_timestamp);
+}
+
+inline uint16_t LatestSequenceNumber(uint16_t sequence_number1,
+                                     uint16_t sequence_number2) {
+  return IsNewerSequenceNumber(sequence_number1, sequence_number2)
+             ? sequence_number1
+             : sequence_number2;
+}
+
+inline uint32_t LatestTimestamp(uint32_t timestamp1, uint32_t timestamp2) {
+  return IsNewerTimestamp(timestamp1, timestamp2) ? timestamp1 : timestamp2;
+}
+
+}  // namespace webrtc
 #endif  // MODULES_INCLUDE_MODULE_COMMON_TYPES_PUBLIC_H_

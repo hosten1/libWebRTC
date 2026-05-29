@@ -129,12 +129,15 @@ endif()
 
 # Settings for Windows platform
 if(WIN32)
+    if(MSVC)
     target_compile_options(abseil PRIVATE
-        /wd4005 # macro-redefinition
-        /wd4018 # sign-compare
-        /wd4068 # unknown pragma
-        /wd4702 # unreachable code
-    )
+            /wd4005 # macro-redefinition
+            /wd4018 # sign-compare
+            /wd4068 # unknown pragma
+            /wd4702 # unreachable code
+        )
+    endif()
+   
 
     target_compile_definitions(abseil PRIVATE
         NOMINMAX
