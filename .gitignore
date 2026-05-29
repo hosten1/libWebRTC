@@ -7,6 +7,5 @@ deps/abseil-cpp/abseil-cpp/build/*
 mac/libwebrtc.xcodeproj/project.xcworkspace/xcuserdata/*
 mac/libwebrtc.xcodeproj/xcuserdata/*
 deps/*.zip
-deps
 build
 .vs*
