@@ -138,12 +138,13 @@ else()
 endif()
 
 if(APPLE)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_POSIX WEBRTC_MAC)
+    target_compile_definitions(libwebrtc PRIVATE WEBRTC_POSIX WEBRTC_MAC DISABLE_H265)
 elseif(UNIX)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_POSIX WEBRTC_LINUX USE_MEDIASOUP_ClASS)
+    target_compile_definitions(libwebrtc PRIVATE WEBRTC_POSIX WEBRTC_LINUX USE_MEDIASOUP_ClASS DISABLE_H265)
 elseif(WIN32)
     target_compile_definitions(libwebrtc PRIVATE
-        WEBRTC_WIN
+        WEBRTC_WIN 
+        DISABLE_H265
         NOMINMAX
         WIN32_LEAN_AND_MEAN
         _CRT_SECURE_NO_WARNINGS
