@@ -1,5 +1,5 @@
 /*
- *  Copyright 2018 The WebRTC Project Authors. All rights reserved.
+ *  Copyright 2019 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
  *  that can be found in the LICENSE file in the root of the source
@@ -8,6 +8,17 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "rtc_base/socket.h"
+#ifndef RTC_BASE_TASK_QUEUE_WIN_H_
+#define RTC_BASE_TASK_QUEUE_WIN_H_
 
-namespace rtc {}  // namespace rtc
+#include <memory>
+
+#include "api/task_queue/task_queue_factory.h"
+
+namespace webrtc {
+
+std::unique_ptr<TaskQueueFactory> CreateTaskQueueWinFactory();
+
+}
+
+#endif  // RTC_BASE_TASK_QUEUE_WIN_H_

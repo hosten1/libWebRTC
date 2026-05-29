@@ -27,6 +27,20 @@ option(WEBRTC_BUILD_WEBRTC_LOGGING "Build WebRTC logging related modules" ON)
 set(WEBRTC_SRC_DIR ${PROJECT_SOURCE_DIR}/libwebrtc)
 set(DEPS_DIR ${PROJECT_SOURCE_DIR}/deps)
 
+# 模块依赖检查
+if(WEBRTC_BUILD_VIDEO AND NOT WEBRTC_BUILD_COMMON_VIDEO)
+    message(STATUS "[libwebrtc] Auto-enabling WEBRTC_BUILD_COMMON_VIDEO (required by video modules)")
+    set(WEBRTC_BUILD_COMMON_VIDEO ON CACHE BOOL "Build common video modules" FORCE)
+endif()
+
+if(WEBRTC_BUILD_COMMON_VIDEO AND NOT WEBRTC_BUILD_VIDEO)
+    message(WARNING "[libwebrtc] WEBRTC_BUILD_COMMON_VIDEO enabled but WEBRTC_BUILD_VIDEO disabled. Common video modules may not be used.")
+endif()
+
+if(WEBRTC_BUILD_GCC AND (NOT WEBRTC_BUILD_FEC))
+    message(STATUS "[libwebrtc] GCC modules do not require FEC, proceeding...")
+endif()
+
 # 核心基础模块（始终编译）
 set(WEBRTC_SOURCES
     # C++ source files.
@@ -83,7 +97,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/tick_timer.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/rtp_to_ntp_estimator.cc
     ${WEBRTC_SRC_DIR}/rtc_base/critical_section.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_wrapper.cc
@@ -110,6 +123,9 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/system_wrappers/source/cpu_features.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/metrics.cc
     ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_encoder.cc
+
+    ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64/base64.cc
+
 )
 
 message(STATUS "[libwebrtc] Core modules configured. Sources: ${WEBRTC_SOURCES}")
@@ -132,8 +148,53 @@ endif()
 if(WEBRTC_BUILD_WEBRTC_THREAD)
     message(STATUS "[libwebrtc] Adding WebRTC threading modules...")
     list(APPEND WEBRTC_SOURCES
-     
+    ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot/sigslot.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/location.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/async_socket.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/async_resolver_interface.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/event.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/event_tracer.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/platform_thread.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/socket.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/signal_thread.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/thread.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/message_handler.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/message_queue.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/net_helpers.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/net_helper.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/socket_address.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/ip_address.cc
+    ${WEBRTC_SRC_DIR}/api/task_queue/task_queue_base.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/task_queue.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/task_utils/repeating_task.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/task_utils/pending_task_safety_flag.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker_internal.cc
     )
+    if(WIN32)
+        list(APPEND WEBRTC_SOURCES
+            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_win.cc
+            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_win.cc
+            )
+    elseif(APPLE)
+        list(APPEND WEBRTC_SOURCES
+            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_gcd.cc
+            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_gcd.cc
+        )
+    elseif(LINUX AND UNIX)
+        list(APPEND WEBRTC_SOURCES
+            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_libevent.cc
+            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_libevent.cc
+        )
+    else()
+        list(APPEND WEBRTC_SOURCES
+            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_stdlib.cc
+            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_stdlib.cc
+        )
+    endif()
+    
     message(STATUS "[libwebrtc] WebRTC threading modules added")
 else()
     message(STATUS "[libwebrtc] WebRTC threading modules disabled")
