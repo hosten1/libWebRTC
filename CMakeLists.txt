@@ -52,17 +52,36 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_video_header.cc
     ${WEBRTC_SRC_DIR}/api/video/video_timing.cc
     ${WEBRTC_SRC_DIR}/api/video/video_bitrate_allocation.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/array_view.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/buffer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/buffer_queue.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/copy_on_write_buffer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/logging.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/memory/aligned_malloc.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/numerics/mod_ops.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/numerics/safe_conversions.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/string_hash.cc
+    ${WEBRTC_SRC_DIR}/api/video/video_frame_buffer.cc
+    ${WEBRTC_SRC_DIR}/api/video/encoded_image.cc
+    ${WEBRTC_SRC_DIR}/api/video/video_content_type.cc
+    ${WEBRTC_SRC_DIR}/api/video/hdr_metadata.cc
+    ${WEBRTC_SRC_DIR}/api/video/color_space.cc
+    ${WEBRTC_SRC_DIR}/api/media_types.cc
+    ${WEBRTC_SRC_DIR}/api/rtp_parameters.cc
+    ${WEBRTC_SRC_DIR}/api/rtp_packet_info.cc
+    ${WEBRTC_SRC_DIR}/api/rtp_headers.cc
+    ${WEBRTC_SRC_DIR}/api/video_codecs/video_decoder.cc
+    ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_encoder.cc
+    ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_decoder.cc
+    ${WEBRTC_SRC_DIR}/api/transport/network_types.cc
     ${WEBRTC_SRC_DIR}/rtc_base/system/file_wrapper.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/system/rtc_export.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/experiments/jitter_upper_bound_experiment.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/critical_section.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/rate_statistics.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_win.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_wrapper.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/bwe_defines.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/aimd_rate_control.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_detector.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/pacing/interval_budget.cc
+    ${WEBRTC_SRC_DIR}/modules/pacing/bitrate_prober.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
+    ${WEBRTC_SRC_DIR}/system_wrappers/source/rtp_to_ntp_estimator.cc
 )
 
 include_directories(
