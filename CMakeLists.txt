@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(libwebrtc LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    add_compile_options(/utf-8)
+    add_compile_options(/utf-8 /permissive-)
+else()
+    add_compile_options(-finput-charset=UTF-8)
 endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -64,7 +66,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/api/video_codecs/video_decoder.cc
     ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_encoder.cc
     ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_decoder.cc
-    ${WEBRTC_SRC_DIR}/api/transport/network_types.cc
     ${WEBRTC_SRC_DIR}/rtc_base/system/file_wrapper.cc
     ${WEBRTC_SRC_DIR}/rtc_base/experiments/jitter_upper_bound_experiment.cc
     ${WEBRTC_SRC_DIR}/rtc_base/critical_section.cc
@@ -81,6 +82,40 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/modules/pacing/interval_budget.cc
     ${WEBRTC_SRC_DIR}/modules/pacing/bitrate_prober.cc
     ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/common_header.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/rtpfb.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/flexfec_header_reader_writer.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/flexfec_receiver.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/forward_error_correction.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/forward_error_correction_internal.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/remote_ntp_time_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_vp8.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_vp9.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_h264.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_video_generic.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_generic_frame_descriptor.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_generic_frame_descriptor_extension.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_dependency_descriptor_extension.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet_history.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet_to_send.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_header_extension_size.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/fec_private_tables_bursty.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/fec_private_tables_random.cc
+    ${WEBRTC_SRC_DIR}/modules/pacing/paced_sender.cc
+    ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/decoder_database.cc
+    ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/packet.cc
+    ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/red_payload_splitter.cc
+    ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/tick_timer.cc
+    ${WEBRTC_SRC_DIR}/modules/audio_coding/codecs/cng/webrtc_cng.cc
+    ${WEBRTC_SRC_DIR}/common_video/h264/sps_parser.cc
+    ${WEBRTC_SRC_DIR}/common_video/h264/pps_parser.cc
+    ${WEBRTC_SRC_DIR}/common_video/h264/h264_common.cc
+    ${WEBRTC_SRC_DIR}/common_video/h264/h264_bitstream_parser.cc
+    ${WEBRTC_SRC_DIR}/common_video/h264/sps_vui_rewriter.cc
+    ${WEBRTC_SRC_DIR}/common_video/generic_frame_descriptor/generic_frame_info.cc
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/dot_product_with_scale.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/rtp_to_ntp_estimator.cc
 )
 

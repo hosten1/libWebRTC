@@ -34,9 +34,15 @@ struct StreamsConfig {
   Timestamp at_time = Timestamp::PlusInfinity();
   absl::optional<bool> requests_alr_probing;
   absl::optional<double> pacing_factor;
+#if defined(WIN32)
+  union {
+    absl::optional<DataRate> min_total_allocated_bitrate;
+  };
+#else
   union {
     absl::optional<DataRate> min_total_allocated_bitrate = absl::nullopt;
   };
+#endif
   absl::optional<DataRate> max_padding_rate;
   absl::optional<DataRate> max_total_allocated_bitrate;
 };
