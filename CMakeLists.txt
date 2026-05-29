@@ -17,6 +17,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 # 预编译选项 - 按功能控制模块编译
 option(WEBRTC_BUILD_WEBRTC_THREAD "Build WebRTC threading modules" ON)
+option(WEBRTC_BUILD_WEBRTC_STUN "Build WebRTC STUN related modules" ON)
 option(WEBRTC_BUILD_RED "Build RED (RTP redundancy) modules" ON)
 option(WEBRTC_BUILD_FEC "Build FEC (Forward Error Correction) modules" ON)
 option(WEBRTC_BUILD_VIDEO "Build video-related modules" ON)
@@ -172,6 +173,7 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
     ${WEBRTC_SRC_DIR}/rtc_base/task_utils/pending_task_safety_flag.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker_internal.cc
+    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/mutex.cc
     )
     if(WIN32)
         list(APPEND WEBRTC_SOURCES
@@ -199,6 +201,19 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
 else()
     message(STATUS "[libwebrtc] WebRTC threading modules disabled")
 endif()
+# webrtc stun modules end
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    message(STATUS "[libwebrtc] Adding STUN modules...")
+    list(APPEND WEBRTC_SOURCES
+        ${WEBRTC_SRC_DIR}/common_audio/audio_util.cc
+        ${WEBRTC_SRC_DIR}/audio/audio_level.cc
+        ${WEBRTC_SRC_DIR}/api/audio/audio_frame.cc
+        ${WEBRTC_SRC_DIR}/api/audio/channel_layout.cc
+    )
+else()
+    message(STATUS "[libwebrtc] STUN modules disabled")
+endif()
+
 # red source file
 if(WEBRTC_BUILD_RED)
     message(STATUS "[libwebrtc] Adding RED modules (RTP redundancy)...")
