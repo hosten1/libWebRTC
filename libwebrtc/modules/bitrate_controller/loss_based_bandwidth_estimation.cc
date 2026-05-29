@@ -11,7 +11,7 @@
 #include "modules/bitrate_controller/loss_based_bandwidth_estimation.h"
 #include "api/units/data_rate.h"
 #include "api/units/time_delta.h"
-#include "system_wrappers/source/field_trial.h"
+#include "system_wrappers/include/field_trial.h"
 
 #include <algorithm>
 #include <string>

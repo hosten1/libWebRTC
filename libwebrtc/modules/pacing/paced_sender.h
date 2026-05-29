@@ -19,9 +19,9 @@
 #include "modules/pacing/packet_router.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "rtc_base/experiments/field_trial_parser.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "RTC/RtpPacket.hpp"
-
+#endif
 #include <absl/types/optional.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -41,7 +41,8 @@ class PacedSender {
   // overshoots from the encoder.
   static const float kDefaultPaceMultiplier;
 
-  PacedSender(PacketRouter* packet_router,
+  PacedSender(Clock* clock,
+              PacketRouter* packet_router,
               const WebRtcKeyValueConfig* field_trials = nullptr);
 
   ~PacedSender() = default;
@@ -99,13 +100,15 @@ class PacedSender {
   void OnPaddingSent(int64_t now_us, size_t bytes_sent);
 
   bool Congested() const;
-
+  int64_t TimeMilliseconds() const ;
+  Clock* const clock_;
   PacketRouter* const packet_router_;
   const std::unique_ptr<FieldTrialBasedConfig> fallback_field_trials_;
   const WebRtcKeyValueConfig* field_trials_;
 
   FieldTrialParameter<int> min_packet_limit_ms_;
-
+  
+  mutable int64_t last_timestamp_ms_;
   bool paused_;
   // This is the media budget, keeping track of how many bits of media
   // we can pace out during the current interval.

@@ -19,6 +19,7 @@
 #include <absl/types/optional.h>
 #include <stdint.h>
 #include <vector>
+#include <limits>
 
 namespace webrtc {
 
@@ -34,9 +35,15 @@ struct StreamsConfig {
   Timestamp at_time = Timestamp::PlusInfinity();
   absl::optional<bool> requests_alr_probing;
   absl::optional<double> pacing_factor;
+#if defined(WIN32)
+  union {
+    absl::optional<DataRate> min_total_allocated_bitrate;
+  };
+#else
   union {
     absl::optional<DataRate> min_total_allocated_bitrate = absl::nullopt;
   };
+#endif
   absl::optional<DataRate> max_padding_rate;
   absl::optional<DataRate> max_total_allocated_bitrate;
 };
@@ -225,7 +232,7 @@ struct ProcessInterval {
 
 // Under development, subject to change without notice.
 struct NetworkStateEstimate {
-  double confidence = NAN;
+  double confidence = std::numeric_limits<double>::quiet_NaN();
   // The time the estimate was received/calculated.
   Timestamp update_time = Timestamp::MinusInfinity();
   Timestamp last_receive_time = Timestamp::MinusInfinity();
@@ -245,11 +252,16 @@ struct NetworkStateEstimate {
   // Only for debugging
   TimeDelta time_delta = TimeDelta::MinusInfinity();
   Timestamp last_feed_time = Timestamp::MinusInfinity();
-  double cross_delay_rate = NAN;
-  double spike_delay_rate = NAN;
+ double cross_delay_rate =
+    std::numeric_limits<double>::quiet_NaN();
+
+double spike_delay_rate =
+    std::numeric_limits<double>::quiet_NaN();
+
   DataRate link_capacity_std_dev = DataRate::MinusInfinity();
   DataRate link_capacity_min = DataRate::MinusInfinity();
-  double cross_traffic_ratio = NAN;
+  double cross_traffic_ratio =
+    std::numeric_limits<double>::quiet_NaN();
 };
 }  // namespace webrtc
 

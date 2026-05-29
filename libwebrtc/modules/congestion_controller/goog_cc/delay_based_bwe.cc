@@ -13,8 +13,11 @@
 
 #include "modules/congestion_controller/goog_cc/delay_based_bwe.h"
 #include "modules/congestion_controller/goog_cc/trendline_estimator.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
+#else
+#endif
+#include "rtc_base/checks.h"
 
 #include <absl/memory/memory.h>
 #include <algorithm>
@@ -86,7 +89,11 @@ DelayBasedBwe::Result DelayBasedBwe::IncomingPacketFeedbackVector(
   // all acks were too late and that the send time history had
   // timed out. We should reduce the rate when this occurs.
   if (packet_feedback_vector.empty()) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_WARN_DEV("very late feedback received");
+#else
+      
+#endif
     return DelayBasedBwe::Result();
   }
 
@@ -172,13 +179,17 @@ DelayBasedBwe::Result DelayBasedBwe::MaybeUpdateEstimate(
 
   // Currently overusing the bandwidth.
   if (delay_detector_->State() == BandwidthUsage::kBwOverusing) {
+#ifdef USE_MEDIASOUP_ClASS
     MS_DEBUG_DEV("delay_detector_->State() == BandwidthUsage::kBwOverusing");
     MS_DEBUG_DEV("in_alr: %s", in_alr ? "true" : "false");
+#endif
     if (in_alr && alr_limited_backoff_enabled_) {
       if (rate_control_.TimeToReduceFurther(at_time, prev_bitrate_)) {
+#ifdef USE_MEDIASOUP_ClASS
         MS_DEBUG_DEV("alr_limited_backoff_enabled_ is true, prev_bitrate:%lld, result.target_bitrate:%lld",
             prev_bitrate_.bps(),
             result.target_bitrate.bps());
+#endif
 
         result.updated =
             UpdateEstimate(at_time, prev_bitrate_, &result.target_bitrate);
@@ -186,9 +197,11 @@ DelayBasedBwe::Result DelayBasedBwe::MaybeUpdateEstimate(
       }
     } else if (acked_bitrate &&
                rate_control_.TimeToReduceFurther(at_time, *acked_bitrate)) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV("acked_bitrate:%lld, result.target_bitrate:%lld",
             acked_bitrate.value().bps(),
             result.target_bitrate.bps());
+#endif
       result.updated =
           UpdateEstimate(at_time, acked_bitrate, &result.target_bitrate);
     } else if (!acked_bitrate && rate_control_.ValidEstimate() &&
@@ -197,7 +210,9 @@ DelayBasedBwe::Result DelayBasedBwe::MaybeUpdateEstimate(
       // rate by 50% every 200 ms.
       // TODO(tschumim): Improve this and/or the acknowledged bitrate estimator
       // so that we (almost) always have a bitrate estimate.
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV("reducing send rate by 50%% every 200 ms");
+#endif
       rate_control_.SetEstimate(rate_control_.LatestEstimate() / 2, at_time);
       result.updated = true;
       result.probe = false;
@@ -205,7 +220,9 @@ DelayBasedBwe::Result DelayBasedBwe::MaybeUpdateEstimate(
     }
   } else {
     if (probe_bitrate) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV("probe bitrate: %lld", probe_bitrate.value().bps());
+#endif
       result.probe = true;
       result.updated = true;
       result.target_bitrate = *probe_bitrate;
@@ -222,10 +239,11 @@ DelayBasedBwe::Result DelayBasedBwe::MaybeUpdateEstimate(
     DataRate bitrate = result.updated ? result.target_bitrate : prev_bitrate_;
 
     prev_bitrate_ = bitrate;
-
+#ifdef USE_MEDIASOUP_ClASS
     MS_DEBUG_DEV("setting prev_bitrate to: %lld, result.updated:%s",
         prev_bitrate_.bps(),
         result.updated ? "true" : "false");
+#endif
 
     prev_state_ = detector_state;
   }
@@ -250,10 +268,14 @@ bool DelayBasedBwe::LatestEstimate(std::vector<uint32_t>* ssrcs,
   // ModuleRtpRtcpImpl::Process()) and the configuration thread (see
   // Call::GetStats()). Should in the future only be accessed from a single
   // thread.
-  //RTC_DCHECK(ssrcs);
-  //RTC_DCHECK(bitrate);
+
+#ifdef USE_MEDIASOUP_ClASS
   MS_ASSERT(ssrcs, "ssrcs must be != null");
   MS_ASSERT(bitrate, "bitrate must be != null");
+#else
+    RTC_DCHECK(ssrcs);
+    RTC_DCHECK(bitrate);
+#endif
 
   if (!rate_control_.ValidEstimate())
     return false;
@@ -264,8 +286,10 @@ bool DelayBasedBwe::LatestEstimate(std::vector<uint32_t>* ssrcs,
 }
 
 void DelayBasedBwe::SetStartBitrate(DataRate start_bitrate) {
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_DEV("BWE setting start bitrate to: %s",
                ToString(start_bitrate).c_str());
+#endif
   rate_control_.SetStartBitrate(start_bitrate);
 }
 

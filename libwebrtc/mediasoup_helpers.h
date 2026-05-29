@@ -1,6 +1,6 @@
 #ifndef LIBWEBRTC_MEDIASOUP_HELPERS_H
 #define LIBWEBRTC_MEDIASOUP_HELPERS_H
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "modules/rtp_rtcp/source/rtp_packet/transport_feedback.h"
 
 #include "RTC/RTCP/FeedbackRtpTransport.hpp"
@@ -43,5 +43,5 @@ namespace mediasoup_helpers
 		};
 	} // namespace FeedbackRtpTransport
 } // namespace mediasoup_helpers
-
+#endif
 #endif

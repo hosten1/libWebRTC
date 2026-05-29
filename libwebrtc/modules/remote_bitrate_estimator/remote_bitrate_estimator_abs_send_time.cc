@@ -15,10 +15,9 @@
 #include "api/transport/field_trial_based_config.h"
 #include "modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
 #include "rtc_base/constructor_magic.h"
-
+#ifdef USE_MEDIASOUP_ClASS
 #include "Logger.hpp"
-#include "DepLibUV.hpp"
-
+#endif
 #include <math.h>
 #include <algorithm>
 
@@ -83,8 +82,10 @@ void RemoteBitrateEstimatorAbsSendTime::AddCluster(std::list<Cluster>* clusters,
 }
 
 RemoteBitrateEstimatorAbsSendTime::RemoteBitrateEstimatorAbsSendTime(
-    RemoteBitrateObserver* observer)
-    : observer_(observer),
+    RemoteBitrateObserver* observer,
+    Clock* clock)
+    : clock_(clock),
+      observer_(observer),
       inter_arrival_(),
       estimator_(),
       detector_(&field_trials_),
@@ -95,7 +96,9 @@ RemoteBitrateEstimatorAbsSendTime::RemoteBitrateEstimatorAbsSendTime(
       last_update_ms_(-1),
       uma_recorded_(false),
       remote_rate_(&field_trials_) {
+#ifdef USE_MEDIASOUP_ClASS
   MS_DEBUG_TAG(bwe, "RemoteBitrateEstimatorAbsSendTime: Instantiating.");
+#endif
 }
 
 void RemoteBitrateEstimatorAbsSendTime::ComputeClusters(
@@ -152,10 +155,10 @@ RemoteBitrateEstimatorAbsSendTime::FindBestProbe(
       }
     } else {
 // MS_NOTE: avoid 'unused variable' compiler warning.
+#ifdef USE_MEDIASOUP_ClASS
 #if MS_LOG_DEV_LEVEL == 3
       int send_bitrate_bps = it->mean_size * 8 * 1000 / it->send_mean_ms;
       int recv_bitrate_bps = it->mean_size * 8 * 1000 / it->recv_mean_ms;
-
       MS_DEBUG_DEV(
         "probe failed, sent at %d bps, received at %d bps [mean "
         "send delta:%fms, mean recv delta:%fms, num probes:%d]",
@@ -164,6 +167,7 @@ RemoteBitrateEstimatorAbsSendTime::FindBestProbe(
         it->send_mean_ms,
         it->recv_mean_ms,
         it->count);
+#endif
 #endif
 
       break;
@@ -191,6 +195,7 @@ RemoteBitrateEstimatorAbsSendTime::ProcessClusters(int64_t now_ms) {
     // Make sure that a probe sent on a lower bitrate than our estimate can't
     // reduce the estimate.
     if (IsBitrateImproving(probe_bitrate_bps)) {
+#ifdef USE_MEDIASOUP_ClASS
       MS_DEBUG_DEV(
           "probe successful, sent at %d bps, received at %d bps "
           "mean send delta:%fms, mean recv delta:%f ms, "
@@ -200,6 +205,7 @@ RemoteBitrateEstimatorAbsSendTime::ProcessClusters(int64_t now_ms) {
           best_it->send_mean_ms,
           best_it->recv_mean_ms,
           best_it->count);
+#endif
 
       remote_rate_.SetEstimate(DataRate::bps(probe_bitrate_bps),
                                Timestamp::ms(now_ms));
@@ -222,7 +228,7 @@ bool RemoteBitrateEstimatorAbsSendTime::IsBitrateImproving(
       new_bitrate_bps > remote_rate_.LatestEstimate().bps<int>();
   return initial_probe || bitrate_above_estimate;
 }
-
+#ifdef USE_MEDIASOUP_ClASS
 void RemoteBitrateEstimatorAbsSendTime::IncomingPacket(
     int64_t arrival_time_ms, size_t payload_size, const RTC::RtpPacket& packet, const uint32_t send_time_24bits)
 {
@@ -230,14 +236,31 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacket(
 
   IncomingPacketInfo(arrival_time_ms, send_time_24bits, payload_size, packet.GetSsrc());
 }
+#else
+void RemoteBitrateEstimatorAbsSendTime::IncomingPacket(
+    int64_t arrival_time_ms,
+    size_t payload_size,
+    const RTPHeader& header) {
+//  RTC_DCHECK_RUNS_SERIALIZED(&network_race_);
+  if (!header.extension.hasAbsoluteSendTime) {
+//    RTC_LOG(LS_WARNING)
+//        << "RemoteBitrateEstimatorAbsSendTimeImpl: Incoming packet "
+//           "is missing absolute send time extension!";
+    return;
+  }
+  IncomingPacketInfo(arrival_time_ms, header.extension.absoluteSendTime,
+                     payload_size, header.ssrc);
+}
+#endif
 
 void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
     int64_t arrival_time_ms,
     uint32_t send_time_24bits,
     size_t payload_size,
     uint32_t ssrc) {
+#ifdef USE_MEDIASOUP_ClASS
   MS_ASSERT(send_time_24bits < (1ul << 24), "invalid sendTime24bits value");
-
+#endif
   if (!uma_recorded_) {
     uma_recorded_ = true;
   }
@@ -247,7 +270,7 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
   uint32_t timestamp = send_time_24bits << kAbsSendTimeInterArrivalUpshift;
   int64_t send_time_ms = static_cast<int64_t>(timestamp) * kTimestampToMs;
 
-  int64_t now_ms = DepLibUV::GetTimeMsInt64();
+    int64_t now_ms = clock_->TimeInMilliseconds();
   // TODO(holmer): SSRCs are only needed for REMB, should be broken out from
   // here.
 
@@ -293,6 +316,7 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
           send_delta_ms = send_time_ms - probes_.back().send_time_ms;
           recv_delta_ms = arrival_time_ms - probes_.back().recv_time_ms;
         }
+#ifdef USE_MEDIASOUP_ClASS
         MS_DEBUG_DEV(
             "probe packet received [send time:%" PRId64
             "ms, recv "
@@ -301,6 +325,7 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
             arrival_time_ms,
             send_delta_ms,
             recv_delta_ms);
+#endif
       }
       probes_.push_back(Probe(send_time_ms, arrival_time_ms, payload_size));
       ++total_probes_received_;
