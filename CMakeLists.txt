@@ -16,10 +16,13 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 # 预编译选项 - 按功能控制模块编译
+option(WEBRTC_BUILD_WEBRTC_THREAD "Build WebRTC threading modules" ON)
 option(WEBRTC_BUILD_RED "Build RED (RTP redundancy) modules" ON)
 option(WEBRTC_BUILD_FEC "Build FEC (Forward Error Correction) modules" ON)
 option(WEBRTC_BUILD_VIDEO "Build video-related modules" ON)
 option(WEBRTC_BUILD_COMMON_VIDEO "Build common video modules" ON)
+option(WEBRTC_BUILD_GCC "Build GCC modules" ON)
+option(WEBRTC_BUILD_WEBRTC_LOGGING "Build WebRTC logging related modules" ON)
 
 set(WEBRTC_SRC_DIR ${PROJECT_SOURCE_DIR}/libwebrtc)
 set(DEPS_DIR ${PROJECT_SOURCE_DIR}/deps)
@@ -40,18 +43,9 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/api/units/data_rate.cc
     ${WEBRTC_SRC_DIR}/api/units/data_size.cc
     ${WEBRTC_SRC_DIR}/api/units/frequency.cc
-    # lym pacer
-    ${WEBRTC_SRC_DIR}/modules/pacing/interval_budget.cc
-    ${WEBRTC_SRC_DIR}/modules/pacing/bitrate_prober.cc
-    ${WEBRTC_SRC_DIR}/modules/pacing/paced_sender.cc
-    # lyn pacer end
-    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_detector.cc
-    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_estimator.cc
-    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/aimd_rate_control.cc
-    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/bwe_defines.cc
+
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/include/rtp_rtcp_defines.cc
     ${WEBRTC_SRC_DIR}/modules/include/module_common_types.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/common_header.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/rtpfb.cc
@@ -100,25 +94,8 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/network/sent_packet.cc
     ${WEBRTC_SRC_DIR}/call/rtp_transport_controller_send.cc
     ${WEBRTC_SRC_DIR}/api/transport/network_types.cc
-    ${WEBRTC_SRC_DIR}/api/transport/goog_cc_factory.cc
     ${WEBRTC_SRC_DIR}/api/network_state_predictor.cc
-    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/inter_arrival.cc
-    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/remote_bitrate_estimator_abs_send_time.cc
-    ${WEBRTC_SRC_DIR}/modules/bitrate_controller/send_side_bandwidth_estimation.cc
-    ${WEBRTC_SRC_DIR}/modules/bitrate_controller/loss_based_bandwidth_estimation.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/goog_cc_network_control.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/probe_bitrate_estimator.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/congestion_window_pushback_controller.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/link_capacity_estimator.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/alr_detector.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/probe_controller.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/median_slope_estimator.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/trendline_estimator.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/delay_based_bwe.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/rtp/send_time_history.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/rtp/transport_feedback_adapter.cc
-    ${WEBRTC_SRC_DIR}/modules/congestion_controller/rtp/control_handler.cc
+
     ${WEBRTC_SRC_DIR}/system_wrappers/source/sleep.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/clock.cc
     ${WEBRTC_SRC_DIR}/api/video/color_space.cc
@@ -129,7 +106,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/flags.cc
     ${WEBRTC_SRC_DIR}/rtc_base/time_utils.cc
     ${WEBRTC_SRC_DIR}/rtc_base/strings/string_builder.cc
-    ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/red_payload_splitter.cc
     ${WEBRTC_SRC_DIR}/rtc_base/platform_thread_types.cc
     ${WEBRTC_SRC_DIR}/rtc_base/strings/audio_format_to_string.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/cpu_features.cc
@@ -153,12 +129,22 @@ else()
     )
 endif()
 
-
+# webrtc threading modules
+if(WEBRTC_BUILD_WEBRTC_THREAD)
+    message(STATUS "[libwebrtc] Adding WebRTC threading modules...")
+    list(APPEND WEBRTC_SOURCES
+     
+    )
+    message(STATUS "[libwebrtc] WebRTC threading modules added")
+else()
+    message(STATUS "[libwebrtc] WebRTC threading modules disabled")
+endif()
 # red source file
 if(WEBRTC_BUILD_RED)
     message(STATUS "[libwebrtc] Adding RED modules (RTP redundancy)...")
     list(APPEND WEBRTC_SOURCES
         ${WEBRTC_SRC_DIR}/modules/audio_coding/codecs/red/audio_encoder_copy_red.cc
+        ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/red_payload_splitter.cc
     )
     message(STATUS "[libwebrtc] RED modules added: audio_encoder_copy_red.cc")
 else()
@@ -241,6 +227,58 @@ if(WEBRTC_BUILD_FEC OR WEBRTC_BUILD_VIDEO OR WEBRTC_BUILD_COMMON_VIDEO)
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_256/fft4g.cc
     )
     message(STATUS "[libwebrtc] Common audio FFT modules added")
+endif()
+
+# gcc modules
+if(WEBRTC_BUILD_GCC)
+    message(STATUS "[libwebrtc] Adding GCC modules...")
+    list(APPEND WEBRTC_SOURCES
+    # lym pacer
+    ${WEBRTC_SRC_DIR}/modules/pacing/interval_budget.cc
+    ${WEBRTC_SRC_DIR}/modules/pacing/bitrate_prober.cc
+    ${WEBRTC_SRC_DIR}/modules/pacing/paced_sender.cc
+    # lyn pacer end
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
+    ${WEBRTC_SRC_DIR}/api/transport/goog_cc_factory.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_detector.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/aimd_rate_control.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/bwe_defines.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/inter_arrival.cc
+    ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/remote_bitrate_estimator_abs_send_time.cc
+    ${WEBRTC_SRC_DIR}/modules/bitrate_controller/send_side_bandwidth_estimation.cc
+    ${WEBRTC_SRC_DIR}/modules/bitrate_controller/loss_based_bandwidth_estimation.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/goog_cc_network_control.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/probe_bitrate_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/congestion_window_pushback_controller.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/link_capacity_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/alr_detector.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/probe_controller.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/median_slope_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/trendline_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/delay_based_bwe.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/rtp/send_time_history.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/rtp/transport_feedback_adapter.cc
+    ${WEBRTC_SRC_DIR}/modules/congestion_controller/rtp/control_handler.cc
+    )
+    message(STATUS "[libwebrtc] GCC modules added: audio_encoder_copy_red.cc")
+else()
+    message(STATUS "[libwebrtc] GCC modules disabled")
+endif()
+
+# webrtc logging modules
+if(WEBRTC_BUILD_WEBRTC_LOGGING)
+    message(STATUS "[libwebrtc] Adding WebRTC logging modules...")
+    list(APPEND WEBRTC_SOURCES
+        ${WEBRTC_SRC_DIR}/rtc_base/log_sinks.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/logging.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/stream.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/file_rotating_stream.cc
+        )
+    message(STATUS "[libwebrtc] WebRTC logging modules added")
+else()
+    message(STATUS "[libwebrtc] WebRTC logging modules disabled")
 endif()
 
 message(STATUS "[libwebrtc] Total sources configured: ${WEBRTC_SOURCES}")
