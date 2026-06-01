@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(libwebrtc LANGUAGES C CXX)
-
+message(STATUS "Building for ${CMAKE_SYSTEM_NAME}")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -22,7 +22,7 @@ option(WEBRTC_BUILD_RED "Build RED (RTP redundancy) modules" ON)
 option(WEBRTC_BUILD_FEC "Build FEC (Forward Error Correction) modules" ON)
 option(WEBRTC_BUILD_VIDEO "Build video-related modules" ON)
 option(WEBRTC_BUILD_COMMON_VIDEO "Build common video modules" ON)
-option(WEBRTC_BUILD_GCC "Build GCC modules" ON)
+option(WEBRTC_BUILD_GCC "Build GCC modules" OFF)
 option(WEBRTC_BUILD_WEBRTC_LOGGING "Build WebRTC logging related modules" ON)
 
 set(WEBRTC_SRC_DIR ${PROJECT_SOURCE_DIR}/libwebrtc)
@@ -59,7 +59,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/api/units/data_size.cc
     ${WEBRTC_SRC_DIR}/api/units/frequency.cc
 
-    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/include/rtp_rtcp_defines.cc
     ${WEBRTC_SRC_DIR}/modules/include/module_common_types.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/common_header.cc
@@ -105,7 +104,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/system/file_wrapper.cc
     ${WEBRTC_SRC_DIR}/rtc_base/experiments/jitter_upper_bound_experiment.cc
     ${WEBRTC_SRC_DIR}/rtc_base/network/sent_packet.cc
-    ${WEBRTC_SRC_DIR}/call/rtp_transport_controller_send.cc
     ${WEBRTC_SRC_DIR}/api/transport/network_types.cc
     ${WEBRTC_SRC_DIR}/api/network_state_predictor.cc
 
@@ -113,7 +111,6 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/system_wrappers/source/clock.cc
     ${WEBRTC_SRC_DIR}/api/video/color_space.cc
     ${WEBRTC_SRC_DIR}/rtc_base/copy_on_write_buffer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/cpu_time.cc
     ${WEBRTC_SRC_DIR}/rtc_base/crypt_string.cc
     ${WEBRTC_SRC_DIR}/rtc_base/data_rate_limiter.cc
     ${WEBRTC_SRC_DIR}/rtc_base/flags.cc
@@ -130,6 +127,18 @@ set(WEBRTC_SOURCES
 )
 
 message(STATUS "[libwebrtc] Core modules configured. Sources: ${WEBRTC_SOURCES}")
+
+# 判断 x86 或 x64 架构（涵盖 i386/i686/x86_64/AMD64）
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
+    list(APPEND WEBRTC_SOURCES
+        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
+        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_neon_sse2.h
+    )
+    # POSIX (Linux, macOS, Android...) 或 Fuchsia 需要启用 SSE2 指令
+    if(UNIX OR CMAKE_SYSTEM_NAME STREQUAL "Fuchsia")
+        target_compile_options(libwebrtc PRIVATE -msse2)
+    endif()
+endif()
 
 if(WIN32)
 # 添加Windows特有资源
@@ -175,32 +184,46 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker_internal.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/mutex.cc
     )
-    if(WIN32)
+
+    # 这个原来是在webrtc的rtc_base/build.gn里的rtc_base_test_utils中使用，只有这个使用了cpu_time.cc,也只有wind和mac Linux、FUCHSIA支持 
+if(CMAKE_SYSTEM_NAME MATCHES "Windows|Linux|Darwin")
+    list(APPEND WEBRTC_SOURCES ${WEBRTC_SRC_DIR}/rtc_base/cpu_time.cc)
+endif()
+
+if(WIN32)
         list(APPEND WEBRTC_SOURCES
             ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_win.cc
             ${WEBRTC_SRC_DIR}/rtc_base/task_queue_win.cc
             )
-    elseif(APPLE)
+elseif(APPLE)
         list(APPEND WEBRTC_SOURCES
             ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_gcd.cc
             ${WEBRTC_SRC_DIR}/rtc_base/task_queue_gcd.cc
         )
-    elseif(LINUX AND UNIX)
+elseif(LINUX AND UNIX)
+    list(APPEND WEBRTC_SOURCES
+            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_stdlib.cc
+            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_stdlib.cc
+            ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_android.cc
+        )
+elseif(LINUX AND UNIX)
         list(APPEND WEBRTC_SOURCES
             ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_libevent.cc
             ${WEBRTC_SRC_DIR}/rtc_base/task_queue_libevent.cc
         )
-    else()
+else()
         list(APPEND WEBRTC_SOURCES
             ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_stdlib.cc
             ${WEBRTC_SRC_DIR}/rtc_base/task_queue_stdlib.cc
         )
-    endif()
+endif()
     
     message(STATUS "[libwebrtc] WebRTC threading modules added")
 else()
     message(STATUS "[libwebrtc] WebRTC threading modules disabled")
 endif()
+
+
 # webrtc stun modules end
 if(WEBRTC_BUILD_WEBRTC_STUN)
     message(STATUS "[libwebrtc] Adding STUN modules...")
@@ -297,8 +320,6 @@ endif()
 if(WEBRTC_BUILD_FEC OR WEBRTC_BUILD_VIDEO OR WEBRTC_BUILD_COMMON_VIDEO)
     message(STATUS "[libwebrtc] Adding common_audio ooura FFT modules...")
     list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft.cc
-        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_256/fft4g.cc
     )
     message(STATUS "[libwebrtc] Common audio FFT modules added")
@@ -313,6 +334,8 @@ if(WEBRTC_BUILD_GCC)
     ${WEBRTC_SRC_DIR}/modules/pacing/bitrate_prober.cc
     ${WEBRTC_SRC_DIR}/modules/pacing/paced_sender.cc
     # lyn pacer end
+    ${WEBRTC_SRC_DIR}/call/rtp_transport_controller_send.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/include/rtp_rtcp_defines.cc
     ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
     ${WEBRTC_SRC_DIR}/api/transport/goog_cc_factory.cc
     ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_detector.cc
@@ -430,7 +453,6 @@ elseif(UNIX)
     target_compile_definitions(libwebrtc PRIVATE
         WEBRTC_POSIX
         WEBRTC_LINUX
-        USE_MEDIASOUP_ClASS
         DISABLE_H265
     )
 else()

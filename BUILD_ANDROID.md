@@ -57,20 +57,13 @@ cd build-android
 ### 2. 配置 CMake（编译 arm64-v8a）
 
 ```bash
-cmake .. ^
-    -G "MinGW Makefiles" ^
-    -DCMAKE_SYSTEM_NAME=Android ^
-    -DCMAKE_SYSTEM_VERSION=24 ^
-    -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a ^
-    -DCMAKE_ANDROID_NDK=%ANDROID_NDK% ^
-    -DCMAKE_ANDROID_STL_TYPE=c++_static ^
-    -DCMAKE_BUILD_TYPE=Release
+cmake .. -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=24 -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a -DCMAKE_ANDROID_NDK="C:/Users/Administrator/AppData/Local/Android/Sdk/ndk/25.0.8151533" -DCMAKE_ANDROID_STL_TYPE=c++_static -DCMAKE_BUILD_TYPE=Releas
 ```
 
 ### 3. 编译
 
 ```bash
-mingw32-make -j8
+ cmake --build . --config Release -j8
 ```
 
 ## 支持的架构

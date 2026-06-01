@@ -68,8 +68,11 @@ void SetCurrentThreadName(const char* name) {
                      reinterpret_cast<ULONG_PTR*>(&threadname_info));
   } __except (EXCEPTION_EXECUTE_HANDLER) {  // NOLINT
   }
-#elif defined(WEBRTC_LINUX) || defined(WEBRTC_ANDROID)
-  prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(name));  // NOLINT
+#elif defined(WEBRTC_ANDROID)
+  // Android 使用 pthread_setname_np，注意签名不同
+  pthread_setname_np(pthread_self(), name);
+#elif defined(WEBRTC_LINUX)
+  prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(name));
 #elif defined(WEBRTC_MAC) || defined(WEBRTC_IOS)
   pthread_setname_np(name);
 #endif
