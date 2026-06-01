@@ -125,8 +125,20 @@ else()
     message(STATUS "[libwebrtc] WebRTC logging modules disabled")
 endif()
 
+add_subdirectory(
+    ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64
+)
 
-add_library(rtc_base STATIC ${WEBRTC_BASE_SOURCES})
+add_subdirectory(
+    ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot
+)
+
+# add_library(rtc_base STATIC ${WEBRTC_BASE_SOURCES})
+add_library(rtc_base OBJECT
+    $<TARGET_OBJECTS:base64>
+    $<TARGET_OBJECTS:sigslot>
+    ${WEBRTC_BASE_SOURCES}
+)
 
 if(MSVC)
     target_compile_options(rtc_base PRIVATE /W0 /utf-8)
@@ -187,20 +199,12 @@ else()
     target_compile_definitions(rtc_base PRIVATE MS_LITTLE_ENDIAN) 
 endif()
 
-add_subdirectory(
-    ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64
-)
-
-add_subdirectory(
-    ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot
-)
-
-target_link_libraries(
-    rtc_base
-    PUBLIC
-        base64
-        sigslot
-)
+# target_link_libraries(
+#     rtc_base
+#     PUBLIC
+#         base64
+#         sigslot
+# )
 
 target_include_directories(
     rtc_base

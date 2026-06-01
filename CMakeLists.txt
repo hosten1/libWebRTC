@@ -201,7 +201,14 @@ endif()
 
 message(STATUS "[libwebrtc] Total sources configured: ${WEBRTC_SOURCES}")
 
-add_library(libwebrtc STATIC ${WEBRTC_SOURCES})
+add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base)
+add_subdirectory(${WEBRTC_SRC_DIR}/api)
+
+add_library(libwebrtc STATIC
+    $<TARGET_OBJECTS:rtc_base>
+    $<TARGET_OBJECTS:api>
+    ${WEBRTC_SOURCES}
+)
 
 target_include_directories(libwebrtc PUBLIC
     ${PROJECT_SOURCE_DIR}
@@ -271,25 +278,22 @@ endif()
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
 
 
-add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base)
+# add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base)
 # add_subdirectory(common_audio)
-add_subdirectory(${WEBRTC_SRC_DIR}/api)
+# add_subdirectory(${WEBRTC_SRC_DIR}/api)
 # add_subdirectory(modules)
 # add_subdirectory(system_wrappers)
 # 添加 third_party 子项目
 add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/ooura)
 add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor)
 
-target_link_libraries(libwebrtc PRIVATE
+target_link_libraries(libwebrtc PUBLIC
     absl_strings
     absl_base
     absl_optional
     absl_flat_hash_map
     # third_party libraries
-
     spl_sqrt_floor
-    rtc_base
-    api
 )
 
 set_target_properties(libwebrtc PROPERTIES OUTPUT_NAME webrtc)

@@ -104,7 +104,11 @@ else()
     message(STATUS "[libwebrtc] GCC modules disabled")
 endif()
 
-add_library(api STATIC ${WEBRTC_API_SOURCES})
+
+# add_library(api STATIC ${WEBRTC_API_SOURCES})
+add_library(api OBJECT
+    ${WEBRTC_API_SOURCES}
+)
 
 if(MSVC)
     target_compile_options(api PRIVATE /W0 /utf-8)

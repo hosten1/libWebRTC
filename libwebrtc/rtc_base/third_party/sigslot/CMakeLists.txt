@@ -5,17 +5,21 @@ if(NOT WEBRTC_SRC_DIR)
     message(FATAL_ERROR "WEBRTC_SRC_DIR required")
 endif()
 
-add_library(sigslot STATIC
+# add_library(sigslot STATIC
+#      ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot/sigslot.cc
+#      ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot/sigslot.h
+# )
+add_library(sigslot OBJECT
      ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot/sigslot.cc
      ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot/sigslot.h
 )
-
 # 添加头文件目录
 target_include_directories(sigslot
     PUBLIC
-        
         ${WEBRTC_SRC_DIR}
 )
+
+
 
 # 设置编译选项
 target_compile_options(sigslot PRIVATE

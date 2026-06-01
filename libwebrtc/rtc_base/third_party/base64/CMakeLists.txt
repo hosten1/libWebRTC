@@ -3,7 +3,12 @@
 if(NOT WEBRTC_SRC_DIR)
     message(FATAL_ERROR "WEBRTC_SRC_DIR required")
 endif()
-add_library(base64 STATIC
+# add_library(base64 STATIC
+#      ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64/base64.cc
+#      ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64/base64.h
+# )
+
+add_library(base64 OBJECT
      ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64/base64.cc
      ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64/base64.h
 )
