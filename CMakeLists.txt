@@ -13,6 +13,198 @@ else()
     add_compile_options(-finput-charset=UTF-8)
 endif()
 
+# ==================== 平台检测与预定义宏 ====================
+# 注意：原始 GN 中 is_posix 包含 Linux, Android, macOS, iOS, Fuchsia 等
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|Darwin|Android|iOS")
+    set(IS_POSIX TRUE)
+else()
+    set(IS_POSIX FALSE)
+endif()
+
+# 编译器检测
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(IS_CLANG TRUE)
+else()
+    set(IS_CLANG FALSE)
+endif()
+
+# use_xcode_clang 大致对应 iOS 平台且使用 AppleClang
+if(IOS AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(USE_XCODE_CLANG TRUE)
+else()
+    set(USE_XCODE_CLANG FALSE)
+endif()
+
+# 处理器架构检测 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    set(CURRENT_CPU "arm64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|armv7|armv7-a")
+    set(CURRENT_CPU "arm")
+    # 简单判断 arm 版本：假设 v7 及以上
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv7")
+        set(ARM_VERSION 7)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "armv8|aarch64")
+        set(ARM_VERSION 8)
+    else()
+        set(ARM_VERSION 6)
+    endif()
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "mips|mipsel")
+    set(CURRENT_CPU "mipsel")
+    # MIPS 相关变量，如需精细控制可提供选项
+    set(MIPS_FLOAT_ABI "hard")   # 默认 hard，用户可覆盖
+    set(MIPS_ARCH_VARIANT "r2")
+    set(MIPS_DSP_REV 1)
+else()
+    set(CURRENT_CPU "unknown")
+endif()
+
+# ==================== 全局编译定义（通过 add_definitions 或 target_compile_definitions） ====================
+# 这些定义会应用于所有目标（由于在 add_subdirectory 前设置）
+add_definitions(
+    -DDISABLE_H265
+)
+
+# 平台相关定义
+if(WIN32)
+    add_definitions(
+        -DWEBRTC_WIN
+        -DNOMINMAX
+        -DWIN32_LEAN_AND_MEAN
+        -D_CRT_SECURE_NO_WARNINGS
+    )
+elseif(ANDROID)
+    add_definitions(
+        -DWEBRTC_POSIX
+        -DWEBRTC_ANDROID
+    )
+elseif(APPLE)
+    if(IOS)
+        add_definitions(
+            -DWEBRTC_POSIX
+            -DWEBRTC_IOS
+        )
+    else()
+        add_definitions(
+            -DWEBRTC_POSIX
+            -DWEBRTC_MAC
+        )
+    endif()
+elseif(UNIX)
+    add_definitions(
+        -DWEBRTC_POSIX
+        -DWEBRTC_LINUX
+    )
+endif()
+
+# 架构相关定义
+if(CURRENT_CPU STREQUAL "arm64")
+    add_definitions(
+        -DWEBRTC_ARCH_ARM64
+        -DWEBRTC_HAS_NEON
+    )
+elseif(CURRENT_CPU STREQUAL "arm")
+    add_definitions(-DWEBRTC_ARCH_ARM)
+    if(ARM_VERSION GREATER_EQUAL 7)
+        add_definitions(-DWEBRTC_ARCH_ARM_V7)
+        if(ARM_USE_NEON)
+            add_definitions(-DWEBRTC_HAS_NEON)
+        endif()
+    endif()
+elseif(CURRENT_CPU STREQUAL "mipsel")
+    add_definitions(-DMIPS32_LE)
+    if(MIPS_FLOAT_ABI STREQUAL "hard")
+        add_definitions(-DMIPS_FPU_LE)
+    endif()
+    if(MIPS_ARCH_VARIANT STREQUAL "r2")
+        add_definitions(-DMIPS32_R2_LE)
+    endif()
+    if(MIPS_DSP_REV GREATER_EQUAL 1)
+        add_definitions(-DMIPS_DSP_R1_LE)
+    endif()
+    if(MIPS_DSP_REV GREATER_EQUAL 2)
+        add_definitions(-DMIPS_DSP_R2_LE)
+    endif()
+endif()
+
+# 端序定义
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
+    add_definitions(-DMS_BIG_ENDIAN)
+else()
+    add_definitions(-DMS_LITTLE_ENDIAN)
+endif()
+
+# Fuzzing 模式定义
+if(use_fuzzing_engine AND optimize_for_fuzzing)
+    add_definitions(-DWEBRTC_UNSAFE_FUZZER_MODE)
+endif()
+
+# Windows UNICODE 反定义
+if(WIN32 AND NOT build_with_chromium AND rtc_win_undef_unicode)
+    add_definitions(
+        -UUNICODE
+        -U_UNICODE
+    )
+endif()
+
+# ==================== 编译器警告/优化标志 ====================
+# 使用生成器表达式区分 C 和 C++ 语言
+# 注意：这些标志会在 add_subdirectory 前全局生效
+if(IS_POSIX)
+    # C 编译器的标志
+    add_compile_options(
+        $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+    )
+    # Objective-C 编译器的标志（如果使用）
+    add_compile_options(
+        $<$<COMPILE_LANGUAGE:OBJC>:-Wstrict-prototypes>
+        $<$<COMPILE_LANGUAGE:OBJCXX>:-Wstrict-prototypes>
+    )
+    # C++ 编译器的标志
+    add_compile_options(
+        $<$<COMPILE_LANGUAGE:CXX>:-Wnon-virtual-dtor>
+        $<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>
+    )
+endif()
+
+if(IS_CLANG)
+    # Clang 通用警告
+    add_compile_options(
+        -Wc++11-narrowing
+        -Wimplicit-fallthrough
+        -Wthread-safety
+        -Winconsistent-missing-override
+        -Wundef
+    )
+    # 额外的警告（Clang 版本足够新时）
+    if(NOT IS_NACL AND (NOT USE_XCODE_CLANG OR current_toolchain STREQUAL host_toolchain))
+        add_compile_options(-Wunused-lambda-capture)
+    endif()
+endif()
+
+if(WIN32 AND NOT IS_CLANG)
+    # MSVC 特定：禁用 C4702（不可达代码）
+    add_compile_options(/wd4702)
+endif()
+
+if(ANDROID AND NOT IS_CLANG)
+    # Android NDK 非 Clang 时禁用内置数学函数优化
+    add_compile_options(
+        -fno-builtin-cos
+        -fno-builtin-sin
+        -fno-builtin-cosf
+        -fno-builtin-sinf
+    )
+endif()
+
+
+# 4. 为 .c 文件设置语言属性
+set_source_files_properties(
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/min_max_operations.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/spl_init.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/spl_inl.c
+    PROPERTIES LANGUAGE C
+)
+
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 # 预编译选项 - 按功能控制模块编译
@@ -67,6 +259,12 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/time_util.cc
    
     ${WEBRTC_SRC_DIR}/common_audio/signal_processing/dot_product_with_scale.cc
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/min_max_operations.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/randomization_functions.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/real_fft.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/refl_coef_to_lpc.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/spl_init.c
+    ${WEBRTC_SRC_DIR}/common_audio/signal_processing/spl_inl.c
     ${WEBRTC_SRC_DIR}/modules/audio_coding/codecs/cng/webrtc_cng.cc
     ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/decoder_database.cc
     ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/tick_timer.cc
@@ -74,6 +272,11 @@ set(WEBRTC_SOURCES
 
    
 )
+if(CURRENT_CPU STREQUAL "arm64" OR (CURRENT_CPU STREQUAL "arm" AND ARM_USE_NEON))
+    list(APPEND WEBRTC_SOURCES
+        ${WEBRTC_SRC_DIR}/common_audio/signal_processing/min_max_operations_neon.c
+    )
+endif()
 
 message(STATUS "[libwebrtc] Core modules configured. Sources: ${WEBRTC_SOURCES}")
 
@@ -219,61 +422,11 @@ target_include_directories(libwebrtc PUBLIC
 if(MSVC)
     target_compile_options(libwebrtc PUBLIC /W0 /utf-8)
 else()
-    target_compile_options(libwebrtc PUBLIC -w -include cstdint)
+    target_compile_options(libwebrtc PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-include;cstdint>
+    )
 endif()
 
-if(WIN32)
-    # Windows 平台（桌面、UWP等）
-    message(STATUS "[libwebrtc] Platform: Windows")
-    target_compile_definitions(libwebrtc PUBLIC
-        WEBRTC_WIN
-        DISABLE_H265
-        NOMINMAX
-        WIN32_LEAN_AND_MEAN
-        _CRT_SECURE_NO_WARNINGS
-    )
-elseif(ANDROID)
-    # Android 平台（优先于 UNIX 判断）
-    message(STATUS "[libwebrtc] Platform: Android")
-    target_compile_definitions(libwebrtc PUBLIC
-        WEBRTC_POSIX
-        WEBRTC_ANDROID
-        DISABLE_H265
-    )
-elseif(APPLE)
-    # Apple 平台（macOS、iOS、tvOS、watchOS）
-    if(IOS)
-        message(STATUS "[libwebrtc] Platform: iOS")
-        target_compile_definitions(libwebrtc PUBLIC
-            WEBRTC_POSIX
-            WEBRTC_IOS
-            DISABLE_H265
-        )
-    else()
-        message(STATUS "[libwebrtc] Platform: macOS")
-        target_compile_definitions(libwebrtc PUBLIC
-            WEBRTC_POSIX
-            WEBRTC_MAC
-            DISABLE_H265
-        )
-    endif()
-elseif(UNIX)
-    # 其他类 Unix 系统（Linux 等）
-    message(STATUS "[libwebrtc] Platform: Linux/Unix")
-    target_compile_definitions(libwebrtc PUBLIC
-        WEBRTC_POSIX
-        WEBRTC_LINUX
-        DISABLE_H265
-    )
-else()
-    message(WARNING "[libwebrtc] Unknown platform!")
-endif()
-
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
-    target_compile_definitions(libwebrtc PUBLIC MS_BIG_ENDIAN)
-else()
-    target_compile_definitions(libwebrtc PUBLIC MS_LITTLE_ENDIAN)
-endif()
 
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
 

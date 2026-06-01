@@ -110,64 +110,66 @@ add_library(api OBJECT
     ${WEBRTC_API_SOURCES}
 )
 
-if(MSVC)
-    target_compile_options(api PRIVATE /W0 /utf-8)
-else()
-    target_compile_options(api PRIVATE -w -include cstdint)
-endif()
+# if(MSVC)
+#     target_compile_options(api PRIVATE /W0 /utf-8)
+# else()
+#     target_compile_options(api PRIVATE 
+#         $<$<COMPILE_LANGUAGE:CXX>:-include cstdint>
+#     )
+# endif()
 
-if(WIN32)
-    # Windows 平台（桌面、UWP等）
-    message(STATUS "[api] Platform: Windows")
-    target_compile_definitions(api PRIVATE
-        WEBRTC_WIN
-        DISABLE_H265
-        NOMINMAX
-        WIN32_LEAN_AND_MEAN
-        _CRT_SECURE_NO_WARNINGS
-    )
-elseif(ANDROID)
-    # Android 平台（优先于 UNIX 判断）
-    message(STATUS "[api] Platform: Android")
-    target_compile_definitions(api PRIVATE
-        WEBRTC_POSIX
-        WEBRTC_ANDROID
-        DISABLE_H265
-    )
-elseif(APPLE)
-    # Apple 平台（macOS、iOS、tvOS、watchOS）
-    if(IOS)
-        message(STATUS "[api] Platform: iOS")
-        target_compile_definitions(api PRIVATE
-            WEBRTC_POSIX
-            WEBRTC_IOS
-            DISABLE_H265
-        )
-    else()
-        message(STATUS "[api] Platform: macOS")
-        target_compile_definitions(api PRIVATE
-            WEBRTC_POSIX
-            WEBRTC_MAC
-            DISABLE_H265
-        )
-    endif()
-elseif(UNIX)
-    # 其他类 Unix 系统（Linux 等）
-    message(STATUS "[api] Platform: Linux/Unix")
-    target_compile_definitions(api PRIVATE
-        WEBRTC_POSIX
-        WEBRTC_LINUX
-        DISABLE_H265
-    )
-else()
-    message(WARNING "[api] Unknown platform!")
-endif()
+# if(WIN32)
+#     # Windows 平台（桌面、UWP等）
+#     message(STATUS "[api] Platform: Windows")
+#     target_compile_definitions(api PRIVATE
+#         WEBRTC_WIN
+#         DISABLE_H265
+#         NOMINMAX
+#         WIN32_LEAN_AND_MEAN
+#         _CRT_SECURE_NO_WARNINGS
+#     )
+# elseif(ANDROID)
+#     # Android 平台（优先于 UNIX 判断）
+#     message(STATUS "[api] Platform: Android")
+#     target_compile_definitions(api PRIVATE
+#         WEBRTC_POSIX
+#         WEBRTC_ANDROID
+#         DISABLE_H265
+#     )
+# elseif(APPLE)
+#     # Apple 平台（macOS、iOS、tvOS、watchOS）
+#     if(IOS)
+#         message(STATUS "[api] Platform: iOS")
+#         target_compile_definitions(api PRIVATE
+#             WEBRTC_POSIX
+#             WEBRTC_IOS
+#             DISABLE_H265
+#         )
+#     else()
+#         message(STATUS "[api] Platform: macOS")
+#         target_compile_definitions(api PRIVATE
+#             WEBRTC_POSIX
+#             WEBRTC_MAC
+#             DISABLE_H265
+#         )
+#     endif()
+# elseif(UNIX)
+#     # 其他类 Unix 系统（Linux 等）
+#     message(STATUS "[api] Platform: Linux/Unix")
+#     target_compile_definitions(api PRIVATE
+#         WEBRTC_POSIX
+#         WEBRTC_LINUX
+#         DISABLE_H265
+#     )
+# else()
+#     message(WARNING "[api] Unknown platform!")
+# endif()
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
-    target_compile_definitions(api PRIVATE MS_BIG_ENDIAN)
-else()
-    target_compile_definitions(api PRIVATE MS_LITTLE_ENDIAN) 
-endif()
+# if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
+#     target_compile_definitions(api PRIVATE MS_BIG_ENDIAN)
+# else()
+#     target_compile_definitions(api PRIVATE MS_LITTLE_ENDIAN) 
+# endif()
 
 target_include_directories(
     api
