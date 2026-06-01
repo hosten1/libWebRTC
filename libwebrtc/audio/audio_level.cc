@@ -11,7 +11,7 @@
 #include "audio/audio_level.h"
 
 #include "api/audio/audio_frame.h"
-// #include "common_audio/signal_processing/include/signal_processing_library.h"
+#include "common_audio/signal_processing/include/signal_processing_library.h"
 
 namespace webrtc {
 namespace voe {
