@@ -22,7 +22,7 @@ option(WEBRTC_BUILD_RED "Build RED (RTP redundancy) modules" ON)
 option(WEBRTC_BUILD_FEC "Build FEC (Forward Error Correction) modules" ON)
 option(WEBRTC_BUILD_VIDEO "Build video-related modules" ON)
 option(WEBRTC_BUILD_COMMON_VIDEO "Build common video modules" ON)
-option(WEBRTC_BUILD_GCC "Build GCC modules" OFF)
+option(WEBRTC_BUILD_GCC "Build GCC modules" ON)
 option(WEBRTC_BUILD_WEBRTC_LOGGING "Build WebRTC logging related modules" ON)
 
 set(WEBRTC_SRC_DIR ${PROJECT_SOURCE_DIR}/libwebrtc)
