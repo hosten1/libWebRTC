@@ -46,18 +46,7 @@ endif()
 set(WEBRTC_SOURCES
     # C++ source files.
     ${WEBRTC_SRC_DIR}/system_wrappers/source/field_trial.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/rate_statistics.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/experiments/field_trial_parser.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/experiments/alr_experiment.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/experiments/field_trial_units.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/experiments/rate_control_settings.cc
-    ${WEBRTC_SRC_DIR}/api/transport/bitrate_settings.cc
-    ${WEBRTC_SRC_DIR}/api/transport/field_trial_based_config.cc
-    ${WEBRTC_SRC_DIR}/api/units/timestamp.cc
-    ${WEBRTC_SRC_DIR}/api/units/time_delta.cc
-    ${WEBRTC_SRC_DIR}/api/units/data_rate.cc
-    ${WEBRTC_SRC_DIR}/api/units/data_size.cc
-    ${WEBRTC_SRC_DIR}/api/units/frequency.cc
+   
 
     ${WEBRTC_SRC_DIR}/modules/include/module_common_types.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet.cc
@@ -66,15 +55,7 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet_history.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet_to_send.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/bit_buffer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/byte_buffer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/checks.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/random.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/string_encode.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/string_to_number.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/string_utils.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/string_view.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/zero_memory.cc
+  
     ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/packet.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_generic_frame_descriptor_extension.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_generic_frame_descriptor.cc
@@ -84,130 +65,18 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet_received.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/time_util.cc
-    ${WEBRTC_SRC_DIR}/api/media_types.cc
-    ${WEBRTC_SRC_DIR}/api/rtp_headers.cc
-    ${WEBRTC_SRC_DIR}/api/rtp_parameters.cc
-    ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_decoder.cc
-    ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_format.cc
-    ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_codec_pair_id.cc
-    ${WEBRTC_SRC_DIR}/api/rtp_packet_info.cc
+   
     ${WEBRTC_SRC_DIR}/common_audio/signal_processing/dot_product_with_scale.cc
     ${WEBRTC_SRC_DIR}/modules/audio_coding/codecs/cng/webrtc_cng.cc
     ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/decoder_database.cc
     ${WEBRTC_SRC_DIR}/modules/audio_coding/neteq/tick_timer.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/rtp_to_ntp_estimator.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/critical_section.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_wrapper.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/crc32.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/system/file_wrapper.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/experiments/jitter_upper_bound_experiment.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/network/sent_packet.cc
-    ${WEBRTC_SRC_DIR}/api/transport/network_types.cc
-    ${WEBRTC_SRC_DIR}/api/network_state_predictor.cc
 
-    ${WEBRTC_SRC_DIR}/system_wrappers/source/sleep.cc
-    ${WEBRTC_SRC_DIR}/system_wrappers/source/clock.cc
-    ${WEBRTC_SRC_DIR}/api/video/color_space.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/copy_on_write_buffer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/crypt_string.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/data_rate_limiter.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/flags.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/time_utils.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/strings/string_builder.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/platform_thread_types.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/strings/audio_format_to_string.cc
-    ${WEBRTC_SRC_DIR}/system_wrappers/source/cpu_features.cc
-    ${WEBRTC_SRC_DIR}/system_wrappers/source/metrics.cc
-    ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_encoder.cc
-
+   
 )
 
 message(STATUS "[libwebrtc] Core modules configured. Sources: ${WEBRTC_SOURCES}")
 
-
-if(WIN32)
-# 添加Windows特有资源
-    list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/rtc_base/win32.cc
-        ${WEBRTC_SRC_DIR}/rtc_base/win32_socket_server.cc
-        ${WEBRTC_SRC_DIR}/rtc_base/win32_window.cc
-        ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_win.cc
-    )
-else()
-    list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_posix.cc
-    )
-endif()
-
-# webrtc threading modules
-if(WEBRTC_BUILD_WEBRTC_THREAD)
-    message(STATUS "[libwebrtc] Adding WebRTC threading modules...")
-    list(APPEND WEBRTC_SOURCES
-    ${WEBRTC_SRC_DIR}/rtc_base/location.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/async_socket.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/async_resolver_interface.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/event.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/event_tracer.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/platform_thread.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/socket.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/signal_thread.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/thread.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/message_handler.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/message_queue.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/net_helpers.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/net_helper.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/socket_address.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/ip_address.cc
-    ${WEBRTC_SRC_DIR}/api/task_queue/task_queue_base.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/task_queue.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/task_utils/repeating_task.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/task_utils/pending_task_safety_flag.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker_internal.cc
-    ${WEBRTC_SRC_DIR}/rtc_base/synchronization/mutex.cc
-    )
-
-    # 这个原来是在webrtc的rtc_base/build.gn里的rtc_base_test_utils中使用，只有这个使用了cpu_time.cc,也只有wind和mac Linux、FUCHSIA支持 
-if(CMAKE_SYSTEM_NAME MATCHES "Windows|Linux|Darwin")
-    list(APPEND WEBRTC_SOURCES ${WEBRTC_SRC_DIR}/rtc_base/cpu_time.cc)
-endif()
-
-if(WIN32)
-        list(APPEND WEBRTC_SOURCES
-            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_win.cc
-            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_win.cc
-            )
-elseif(APPLE)
-        list(APPEND WEBRTC_SOURCES
-            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_gcd.cc
-            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_gcd.cc
-        )
-elseif(LINUX AND UNIX)
-    list(APPEND WEBRTC_SOURCES
-            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_stdlib.cc
-            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_stdlib.cc
-            ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_android.cc
-        )
-elseif(LINUX AND UNIX)
-        list(APPEND WEBRTC_SOURCES
-            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_libevent.cc
-            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_libevent.cc
-        )
-else()
-        list(APPEND WEBRTC_SOURCES
-            ${WEBRTC_SRC_DIR}/api/task_queue/default_task_queue_factory_stdlib.cc
-            ${WEBRTC_SRC_DIR}/rtc_base/task_queue_stdlib.cc
-        )
-endif()
-    
-    message(STATUS "[libwebrtc] WebRTC threading modules added")
-else()
-    message(STATUS "[libwebrtc] WebRTC threading modules disabled")
-endif()
 
 
 # webrtc stun modules end
@@ -216,8 +85,6 @@ if(WEBRTC_BUILD_WEBRTC_STUN)
     list(APPEND WEBRTC_SOURCES
         ${WEBRTC_SRC_DIR}/common_audio/audio_util.cc
         ${WEBRTC_SRC_DIR}/audio/audio_level.cc
-        ${WEBRTC_SRC_DIR}/api/audio/audio_frame.cc
-        ${WEBRTC_SRC_DIR}/api/audio/channel_layout.cc
     )
 else()
     message(STATUS "[libwebrtc] STUN modules disabled")
@@ -261,18 +128,9 @@ endif()
 if(WEBRTC_BUILD_VIDEO)
     message(STATUS "[libwebrtc] Adding video modules...")
     list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/api/video/encoded_image.cc
-        ${WEBRTC_SRC_DIR}/api/video/video_bitrate_allocation.cc
-        ${WEBRTC_SRC_DIR}/api/video/video_frame_buffer.cc
-        ${WEBRTC_SRC_DIR}/api/video_codecs/video_codec.cc
-        ${WEBRTC_SRC_DIR}/api/video_codecs/video_decoder.cc
         ${WEBRTC_SRC_DIR}/modules/video_coding/encoded_frame.cc
         ${WEBRTC_SRC_DIR}/modules/video_coding/include/video_codec_interface.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_video_header.cc
-        ${WEBRTC_SRC_DIR}/api/video/video_timing.cc
-        ${WEBRTC_SRC_DIR}/api/video/video_content_type.cc
-        ${WEBRTC_SRC_DIR}/api/video/hdr_metadata.cc
-        ${WEBRTC_SRC_DIR}/api/video/color_space.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_vp8.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_vp9.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format_h264.cc
@@ -314,7 +172,6 @@ if(WEBRTC_BUILD_GCC)
     ${WEBRTC_SRC_DIR}/call/rtp_transport_controller_send.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/include/rtp_rtcp_defines.cc
     ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
-    ${WEBRTC_SRC_DIR}/api/transport/goog_cc_factory.cc
     ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_detector.cc
     ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_estimator.cc
     ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/aimd_rate_control.cc
@@ -342,63 +199,26 @@ else()
     message(STATUS "[libwebrtc] GCC modules disabled")
 endif()
 
-# webrtc logging modules
-if(WEBRTC_BUILD_WEBRTC_LOGGING)
-    message(STATUS "[libwebrtc] Adding WebRTC logging modules...")
-    list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/rtc_base/log_sinks.cc
-        ${WEBRTC_SRC_DIR}/rtc_base/logging.cc
-        ${WEBRTC_SRC_DIR}/rtc_base/stream.cc
-        ${WEBRTC_SRC_DIR}/rtc_base/file_rotating_stream.cc
-        )
-    message(STATUS "[libwebrtc] WebRTC logging modules added")
-else()
-    message(STATUS "[libwebrtc] WebRTC logging modules disabled")
-endif()
-
 message(STATUS "[libwebrtc] Total sources configured: ${WEBRTC_SOURCES}")
-
-# 添加 third_party 子项目
-add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/ooura)
-add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor)
-add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base/third_party/base64)
-add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot)
 
 add_library(libwebrtc STATIC ${WEBRTC_SOURCES})
 
-# 添加编译定义
-if(WEBRTC_BUILD_RED)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_RED)
-endif()
-if(WEBRTC_BUILD_FEC)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_FEC)
-endif()
-if(WEBRTC_BUILD_GCC)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_GCC)
-endif()
-if(WEBRTC_BUILD_VIDEO)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_VIDEO)
-endif()
-if(WEBRTC_BUILD_COMMON_VIDEO)
-    target_compile_definitions(libwebrtc PRIVATE WEBRTC_BUILD_COMMON_VIDEO)
-endif()
-
-target_include_directories(libwebrtc PRIVATE
+target_include_directories(libwebrtc PUBLIC
     ${PROJECT_SOURCE_DIR}
     ${WEBRTC_SRC_DIR}
     ${DEPS_DIR}/abseil-cpp/abseil-cpp
 )
 
 if(MSVC)
-    target_compile_options(libwebrtc PRIVATE /W0 /utf-8)
+    target_compile_options(libwebrtc PUBLIC /W0 /utf-8)
 else()
-    target_compile_options(libwebrtc PRIVATE -w -include cstdint)
+    target_compile_options(libwebrtc PUBLIC -w -include cstdint)
 endif()
 
 if(WIN32)
     # Windows 平台（桌面、UWP等）
     message(STATUS "[libwebrtc] Platform: Windows")
-    target_compile_definitions(libwebrtc PRIVATE
+    target_compile_definitions(libwebrtc PUBLIC
         WEBRTC_WIN
         DISABLE_H265
         NOMINMAX
@@ -408,7 +228,7 @@ if(WIN32)
 elseif(ANDROID)
     # Android 平台（优先于 UNIX 判断）
     message(STATUS "[libwebrtc] Platform: Android")
-    target_compile_definitions(libwebrtc PRIVATE
+    target_compile_definitions(libwebrtc PUBLIC
         WEBRTC_POSIX
         WEBRTC_ANDROID
         DISABLE_H265
@@ -417,14 +237,14 @@ elseif(APPLE)
     # Apple 平台（macOS、iOS、tvOS、watchOS）
     if(IOS)
         message(STATUS "[libwebrtc] Platform: iOS")
-        target_compile_definitions(libwebrtc PRIVATE
+        target_compile_definitions(libwebrtc PUBLIC
             WEBRTC_POSIX
             WEBRTC_IOS
             DISABLE_H265
         )
     else()
         message(STATUS "[libwebrtc] Platform: macOS")
-        target_compile_definitions(libwebrtc PRIVATE
+        target_compile_definitions(libwebrtc PUBLIC
             WEBRTC_POSIX
             WEBRTC_MAC
             DISABLE_H265
@@ -433,7 +253,7 @@ elseif(APPLE)
 elseif(UNIX)
     # 其他类 Unix 系统（Linux 等）
     message(STATUS "[libwebrtc] Platform: Linux/Unix")
-    target_compile_definitions(libwebrtc PRIVATE
+    target_compile_definitions(libwebrtc PUBLIC
         WEBRTC_POSIX
         WEBRTC_LINUX
         DISABLE_H265
@@ -443,12 +263,22 @@ else()
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
-    target_compile_definitions(libwebrtc PRIVATE MS_BIG_ENDIAN)
+    target_compile_definitions(libwebrtc PUBLIC MS_BIG_ENDIAN)
 else()
-    target_compile_definitions(libwebrtc PRIVATE MS_LITTLE_ENDIAN)
+    target_compile_definitions(libwebrtc PUBLIC MS_LITTLE_ENDIAN)
 endif()
 
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
+
+
+add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base)
+# add_subdirectory(common_audio)
+add_subdirectory(${WEBRTC_SRC_DIR}/api)
+# add_subdirectory(modules)
+# add_subdirectory(system_wrappers)
+# 添加 third_party 子项目
+add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/ooura)
+add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor)
 
 target_link_libraries(libwebrtc PRIVATE
     absl_strings
@@ -456,9 +286,10 @@ target_link_libraries(libwebrtc PRIVATE
     absl_optional
     absl_flat_hash_map
     # third_party libraries
-    base64
-    sigslot
+
     spl_sqrt_floor
+    rtc_base
+    api
 )
 
 set_target_properties(libwebrtc PROPERTIES OUTPUT_NAME webrtc)
