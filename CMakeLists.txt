@@ -122,23 +122,10 @@ set(WEBRTC_SOURCES
     ${WEBRTC_SRC_DIR}/system_wrappers/source/metrics.cc
     ${WEBRTC_SRC_DIR}/api/audio_codecs/audio_encoder.cc
 
-    ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64/base64.cc
-
 )
 
 message(STATUS "[libwebrtc] Core modules configured. Sources: ${WEBRTC_SOURCES}")
 
-# 判断 x86 或 x64 架构（涵盖 i386/i686/x86_64/AMD64）
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
-    list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
-        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_neon_sse2.h
-    )
-    # POSIX (Linux, macOS, Android...) 或 Fuchsia 需要启用 SSE2 指令
-    if(UNIX OR CMAKE_SYSTEM_NAME STREQUAL "Fuchsia")
-        target_compile_options(libwebrtc PRIVATE -msse2)
-    endif()
-endif()
 
 if(WIN32)
 # 添加Windows特有资源
@@ -158,7 +145,6 @@ endif()
 if(WEBRTC_BUILD_WEBRTC_THREAD)
     message(STATUS "[libwebrtc] Adding WebRTC threading modules...")
     list(APPEND WEBRTC_SOURCES
-    ${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot/sigslot.cc
     ${WEBRTC_SRC_DIR}/rtc_base/location.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield_policy.cc
     ${WEBRTC_SRC_DIR}/rtc_base/synchronization/yield.cc
@@ -316,15 +302,6 @@ else()
 endif()
 # common video modules end
 
-# common_audio ooura fft
-if(WEBRTC_BUILD_FEC OR WEBRTC_BUILD_VIDEO OR WEBRTC_BUILD_COMMON_VIDEO)
-    message(STATUS "[libwebrtc] Adding common_audio ooura FFT modules...")
-    list(APPEND WEBRTC_SOURCES
-        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_256/fft4g.cc
-    )
-    message(STATUS "[libwebrtc] Common audio FFT modules added")
-endif()
-
 # gcc modules
 if(WEBRTC_BUILD_GCC)
     message(STATUS "[libwebrtc] Adding GCC modules...")
@@ -380,6 +357,12 @@ else()
 endif()
 
 message(STATUS "[libwebrtc] Total sources configured: ${WEBRTC_SOURCES}")
+
+# 添加 third_party 子项目
+add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/ooura)
+add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor)
+add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base/third_party/base64)
+add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base/third_party/sigslot)
 
 add_library(libwebrtc STATIC ${WEBRTC_SOURCES})
 
@@ -472,6 +455,10 @@ target_link_libraries(libwebrtc PRIVATE
     absl_base
     absl_optional
     absl_flat_hash_map
+    # third_party libraries
+    base64
+    sigslot
+    spl_sqrt_floor
 )
 
 set_target_properties(libwebrtc PROPERTIES OUTPUT_NAME webrtc)
