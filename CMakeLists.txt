@@ -341,17 +341,6 @@ install(DIRECTORY ${WEBRTC_SRC_DIR}/call/
         DESTINATION include/webrtc/call
         FILES_MATCHING PATTERN "*.h")
 
-# Test program for RTP PT manipulator
-add_executable(test_rtp_pt_manipulator test_rtp_pt_manipulator.cc)
-target_link_libraries(test_rtp_pt_manipulator PRIVATE
-    libwebrtc
-    abseil
-)
-
-if(WIN32)
-    target_link_libraries(test_rtp_pt_manipulator PRIVATE ws2_32 winmm)
-endif()
-
 # Test program for real RTP packet
 add_executable(test_real_rtp_packet test_real_rtp_packet.cc)
 target_link_libraries(test_real_rtp_packet PRIVATE
