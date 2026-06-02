@@ -190,7 +190,6 @@ bool RtpPtManipulatorImpl::ModifyRedPayload(uint8_t* payload,
                            payload[offset + 2];
     
     if (IsUlpfecPacket(original_pt) && new_pt_values.ulpfec_pt.has_value()) {
-      // 保留最高位的块结束标志，修改低7位
       embedded_pt_byte = (embedded_pt_byte & 0x80) | (new_pt_values.ulpfec_pt.value() & 0x7F);
       ModifyUlpfecPayload(payload + offset + 3, 
                           std::min(static_cast<size_t>(block_length), 

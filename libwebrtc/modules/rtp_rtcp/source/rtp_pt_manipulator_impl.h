@@ -14,10 +14,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
-#include <optional>
 #include <string>
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "modules/rtp_rtcp/source/rtp_packet.h"
 
 namespace webrtc {
@@ -34,7 +34,6 @@ struct SdpMediaDescription {
     auto it = rtpmap.find(pt);
     if (it != rtpmap.end()) {
       const std::string& full = it->second;
-      // rtpmap 格式通常为 "VP9/90000" 或 "red/90000"
       size_t slash = full.find('/');
       if (slash != std::string::npos) {
         return full.substr(0, slash);
@@ -51,16 +50,16 @@ struct SdpMediaDescription {
 };
 
 struct RtpPayloadTypes {
-  std::optional<uint8_t> red_pt;
-  std::optional<uint8_t> ulpfec_pt;
-  std::optional<uint8_t> vp9_pt;
-  std::optional<uint8_t> rtx_pt;
+  absl::optional<uint8_t> red_pt;
+  absl::optional<uint8_t> ulpfec_pt;
+  absl::optional<uint8_t> vp9_pt;
+  absl::optional<uint8_t> rtx_pt;
 
   void Reset() {
-    red_pt.reset();
-    ulpfec_pt.reset();
-    vp9_pt.reset();
-    rtx_pt.reset();
+    red_pt = absl::nullopt;
+    ulpfec_pt = absl::nullopt;
+    vp9_pt = absl::nullopt;
+    rtx_pt = absl::nullopt;
   }
 
   bool HasAnyValue() const {
@@ -95,7 +94,7 @@ class RtpPtManipulatorImpl {
   bool ModifyPtValues(RtpPacket* packet, const RtpPayloadTypes& new_pt_values);
 
   bool VerifyModification(const RtpPacket& modified_packet,
-                         const RtpPayloadTypes& expected_pt_values) const;
+                          const RtpPayloadTypes& expected_pt_values) const;
 
  private:
   bool ParseRedPayload(const uint8_t* payload, size_t payload_size,
