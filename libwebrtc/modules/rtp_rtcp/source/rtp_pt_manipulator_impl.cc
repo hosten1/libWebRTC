@@ -1,151 +1,91 @@
-/*
- *  Copyright (c) 2024 The WebRTC project authors. All Rights Reserved.
- */
-
 #include "modules/rtp_rtcp/source/rtp_pt_manipulator_impl.h"
 
 #include <cstring>
+#include <algorithm>
+#include <map>
+#include <set>
 
-#include "modules/rtp_rtcp/source/rtp_packet.h"
 #include "rtc_base/checks.h"
 
 namespace webrtc {
 
-static constexpr size_t kRedBlockHeaderSize = 4;
+// RED 头大小（WebRTC 实现：1 字节）
+static constexpr size_t kRedHeaderSize = 1;
 
-RtpPtManipulatorImpl::RtpPtManipulatorImpl() {}
+// === SdpMediaDescription 实现 ===
+std::string SdpMediaDescription::GetCodecName(uint8_t pt) const {
+  auto it = rtpmap.find(pt);
+  if (it == rtpmap.end()) return "";
+  const std::string& full = it->second;
+  size_t slash = full.find('/');
+  if (slash != std::string::npos) {
+    return full.substr(0, slash);
+  }
+  return full;
+}
 
-RtpPtManipulatorImpl::~RtpPtManipulatorImpl() {}
+bool SdpMediaDescription::IsCodec(uint8_t pt, const std::string& codec_name) const {
+  std::string name = GetCodecName(pt);
+  return !name.empty() && name == codec_name;
+}
+
+// === RtpPayloadTypes 实现 ===
+void RtpPayloadTypes::Clear() {
+  red_pts.clear();
+  ulpfec_pts.clear();
+  vp9_pts.clear();
+  rtx_pts.clear();
+}
+
+bool RtpPayloadTypes::HasAny() const {
+  return !red_pts.empty() || !ulpfec_pts.empty() || !vp9_pts.empty() || !rtx_pts.empty();
+}
+
+std::string RtpPayloadTypes::ToString() const {
+  std::string out;
+  auto append = [&](const char* name, const std::vector<uint8_t>& pts) {
+    if (!pts.empty()) {
+      out += name;
+      out += "=";
+      for (size_t i = 0; i < pts.size(); ++i) {
+        out += std::to_string(pts[i]);
+        if (i + 1 < pts.size()) out += ",";
+      }
+      out += " ";
+    }
+  };
+  append("RED", red_pts);
+  append("ULPFEC", ulpfec_pts);
+  append("VP9", vp9_pts);
+  append("RTX", rtx_pts);
+  if (!out.empty()) out.pop_back();
+  return out;
+}
+
+// === RtpPtManipulatorImpl 实现 ===
+RtpPtManipulatorImpl::RtpPtManipulatorImpl() = default;
+RtpPtManipulatorImpl::~RtpPtManipulatorImpl() = default;
 
 void RtpPtManipulatorImpl::ConfigureSdp(const SdpMediaDescription& sdp) {
-  sdp_ = sdp;
   red_pt_.reset();
   ulpfec_pt_.reset();
   vp9_pt_.reset();
   rtx_pt_.reset();
   for (const auto& kv : sdp.rtpmap) {
-    const std::string& name = kv.second;
-    if (name.find("red") == 0) red_pt_ = kv.first;
-    else if (name.find("ulpfec") == 0) ulpfec_pt_ = kv.first;
-    else if (name.find("VP9") == 0) vp9_pt_ = kv.first;
-    else if (name.find("rtx") == 0) rtx_pt_ = kv.first;
+    std::string name = sdp.GetCodecName(kv.first);
+    if (name == "red") red_pt_ = kv.first;
+    else if (name == "ulpfec") ulpfec_pt_ = kv.first;
+    else if (name == "VP9") vp9_pt_ = kv.first;
+    else if (name == "rtx") rtx_pt_ = kv.first;
   }
 }
 
-bool RtpPtManipulatorImpl::ParseRedBlocks(const uint8_t* payload,
-                                          size_t payload_size,
-                                          std::vector<RedBlock>& blocks) const {
-  size_t offset = 0;
-  while (offset + kRedBlockHeaderSize <= payload_size) {
-    const uint8_t* header = payload + offset;
-    bool is_last = (header[0] & 0x80) != 0;
-    uint8_t pt = header[0] & 0x7F;
-    uint16_t timestamp_offset = ((header[1] & 0x3F) << 8) | header[2];
-    uint16_t block_length = ((header[1] & 0xC0) << 2) | header[3];
-    size_t data_offset = offset + kRedBlockHeaderSize;
-    blocks.push_back({is_last, pt, timestamp_offset, block_length, data_offset});
-    offset += kRedBlockHeaderSize;
-    if (is_last) break;
-  }
-  size_t total_end = 0;
-  for (const auto& blk : blocks) {
-    total_end = std::max(total_end, blk.offset + blk.block_length);
-  }
-  return total_end <= payload_size;
-}
-
-bool RtpPtManipulatorImpl::ModifyRedBlocks(uint8_t* payload, size_t payload_size,
-                                           const RtpPayloadTypes& new_pt_values) const {
-  std::vector<RedBlock> blocks;
-  if (!ParseRedBlocks(payload, payload_size, blocks)) return false;
-  size_t offset = 0;
-  for (const auto& blk : blocks) {
-    uint8_t* header = payload + offset;
-    uint8_t old_pt = header[0] & 0x7F;
-    uint8_t new_pt = old_pt;
-    if (IsUlpfecPacket(old_pt) && new_pt_values.ulpfec_pt.has_value())
-      new_pt = *new_pt_values.ulpfec_pt;
-    else if (IsVp9Packet(old_pt) && new_pt_values.vp9_pt.has_value())
-      new_pt = *new_pt_values.vp9_pt;
-    else if (IsRtxPacket(old_pt) && new_pt_values.rtx_pt.has_value())
-      new_pt = *new_pt_values.rtx_pt;
-    header[0] = (header[0] & 0x80) | (new_pt & 0x7F);
-    offset += kRedBlockHeaderSize;
-  }
-  return true;
-}
-
-RtpPayloadTypes RtpPtManipulatorImpl::ParsePtValues(const RtpPacket& packet) const {
-  RtpPayloadTypes pt_values;
-  uint8_t outer_pt = packet.PayloadType();
-  if (IsRedPacket(outer_pt)) {
-    pt_values.red_pt = outer_pt;
-    std::vector<RedBlock> blocks;
-    if (ParseRedBlocks(packet.payload().data(), packet.payload().size(), blocks)) {
-      for (const auto& blk : blocks) {
-        if (IsUlpfecPacket(blk.payload_type))
-          pt_values.ulpfec_pt = blk.payload_type;
-        else if (IsVp9Packet(blk.payload_type))
-          pt_values.vp9_pt = blk.payload_type;
-        else if (IsRtxPacket(blk.payload_type))
-          pt_values.rtx_pt = blk.payload_type;
-      }
-    }
-  } else if (IsUlpfecPacket(outer_pt)) {
-    pt_values.ulpfec_pt = outer_pt;
-  } else if (IsVp9Packet(outer_pt)) {
-    pt_values.vp9_pt = outer_pt;
-  } else if (IsRtxPacket(outer_pt)) {
-    pt_values.rtx_pt = outer_pt;
-  }
-  return pt_values;
-}
-
-bool RtpPtManipulatorImpl::ModifyPtValues(RtpPacket* packet,
-                                          const RtpPayloadTypes& new_pt_values) {
-  if (!packet) return false;
-
-  uint8_t current_pt = packet->PayloadType();
-
-  // RED packet (may contain multiple blocks)
-  if (IsRedPacket(current_pt) && new_pt_values.red_pt.has_value()) {
-    // Step 1: modify outer RTP PT
-    packet->SetPayloadType(*new_pt_values.red_pt);
-    // Step 2: get a modifiable copy of the entire packet buffer
-    rtc::CopyOnWriteBuffer buffer = packet->Buffer(); // copy
-    // Step 3: modify RED blocks inside the payload
-    if (packet->payload_size() > 0) {
-      uint8_t* payload_ptr = buffer.data() + packet->headers_size();
-      if (!ModifyRedBlocks(payload_ptr, packet->payload_size(), new_pt_values)) {
-        return false;
-      }
-    }
-    // Step 4: re-parse the modified buffer back into the packet
-    if (!packet->Parse(buffer)) {
-      return false;
-    }
-    return true;
-  }
-
-  // Non-RED packets: simple PT change
-  if (IsVp9Packet(current_pt) && new_pt_values.vp9_pt.has_value())
-    packet->SetPayloadType(*new_pt_values.vp9_pt);
-  else if (IsUlpfecPacket(current_pt) && new_pt_values.ulpfec_pt.has_value())
-    packet->SetPayloadType(*new_pt_values.ulpfec_pt);
-  else if (IsRtxPacket(current_pt) && new_pt_values.rtx_pt.has_value())
-    packet->SetPayloadType(*new_pt_values.rtx_pt);
-
-  return true;
-}
-
-bool RtpPtManipulatorImpl::VerifyModification(const RtpPacket& modified_packet,
-                                              const RtpPayloadTypes& expected) const {
-  RtpPayloadTypes actual = ParsePtValues(modified_packet);
-  if (expected.red_pt && (!actual.red_pt || *actual.red_pt != *expected.red_pt)) return false;
-  if (expected.ulpfec_pt && (!actual.ulpfec_pt || *actual.ulpfec_pt != *expected.ulpfec_pt)) return false;
-  if (expected.vp9_pt && (!actual.vp9_pt || *actual.vp9_pt != *expected.vp9_pt)) return false;
-  if (expected.rtx_pt && (!actual.rtx_pt || *actual.rtx_pt != *expected.rtx_pt)) return false;
-  return true;
+RtpPtManipulatorImpl::CodecType RtpPtManipulatorImpl::GetCodecType(uint8_t pt) const {
+  if (red_pt_.has_value() && pt == *red_pt_) return kCodecRed;
+  if (ulpfec_pt_.has_value() && pt == *ulpfec_pt_) return kCodecUlpfec;
+  if (vp9_pt_.has_value() && pt == *vp9_pt_) return kCodecVp9;
+  if (rtx_pt_.has_value() && pt == *rtx_pt_) return kCodecRtx;
+  return kCodecUnknown;
 }
 
 bool RtpPtManipulatorImpl::IsRedPacket(uint8_t pt) const {
@@ -159,6 +99,141 @@ bool RtpPtManipulatorImpl::IsVp9Packet(uint8_t pt) const {
 }
 bool RtpPtManipulatorImpl::IsRtxPacket(uint8_t pt) const {
   return rtx_pt_.has_value() && pt == *rtx_pt_;
+}
+
+RtpPayloadTypes RtpPtManipulatorImpl::ParsePtValues(const RtpPacket& packet) const {
+  RtpPayloadTypes result;
+  uint8_t outer_pt = packet.PayloadType();
+  CodecType outer_type = GetCodecType(outer_pt);
+
+  if (outer_type == kCodecRed) {
+    result.red_pts.push_back(outer_pt);
+    // RED 包：负载的第一个字节是内层 PT
+    if (packet.payload_size() >= kRedHeaderSize) {
+      uint8_t inner_pt = packet.payload()[0] & 0x7F;
+      CodecType inner_type = GetCodecType(inner_pt);
+      if (inner_type == kCodecUlpfec) {
+        result.ulpfec_pts.push_back(inner_pt);
+      } else if (inner_type == kCodecVp9) {
+        result.vp9_pts.push_back(inner_pt);
+      } else if (inner_type == kCodecRtx) {
+        result.rtx_pts.push_back(inner_pt);
+      }
+    }
+  } else if (outer_type == kCodecUlpfec) {
+    result.ulpfec_pts.push_back(outer_pt);
+  } else if (outer_type == kCodecVp9) {
+    result.vp9_pts.push_back(outer_pt);
+  } else if (outer_type == kCodecRtx) {
+    result.rtx_pts.push_back(outer_pt);
+  }
+  return result;
+}
+
+bool RtpPtManipulatorImpl::ModifyPtValues(RtpPacket* packet,
+                                          const std::vector<PtMappingRule>& mappings) {
+  if (!packet) return false;
+  uint8_t current_pt = packet->PayloadType();
+  CodecType outer_type = GetCodecType(current_pt);
+
+  // 构建映射表
+  std::map<uint8_t, uint8_t> pt_map;
+  for (const auto& m : mappings) {
+    pt_map[m.old_pt] = m.new_pt;
+  }
+
+  if (outer_type == kCodecRed) {
+    // 修改外层 RTP PT
+    auto it = pt_map.find(current_pt);
+    if (it != pt_map.end()) {
+      packet->SetPayloadType(it->second);
+    }
+    // 修改 RED 负载中的内层 PT（第一个字节）
+    if (packet->payload_size() >= kRedHeaderSize) {
+      rtc::CopyOnWriteBuffer buffer = packet->Buffer();
+      uint8_t* payload_ptr = buffer.data() + packet->headers_size();
+      uint8_t inner_pt = payload_ptr[0] & 0x7F;
+      auto it2 = pt_map.find(inner_pt);
+      if (it2 != pt_map.end()) {
+        payload_ptr[0] = (payload_ptr[0] & 0x80) | (it2->second & 0x7F);
+      }
+      // 重新解析修改后的 buffer
+      if (!packet->Parse(buffer)) {
+        return false;
+      }
+    }
+    return true;
+  } else if (outer_type != kCodecUnknown) {
+    auto it = pt_map.find(current_pt);
+    if (it != pt_map.end()) {
+      packet->SetPayloadType(it->second);
+    }
+    return true;
+  }
+  return true;
+}
+
+bool RtpPtManipulatorImpl::ModifyPtValuesSimple(RtpPacket* packet,
+                                                const RtpPayloadTypes& new_pt_values) {
+  if (!packet) return false;
+  uint8_t current_pt = packet->PayloadType();
+  CodecType outer_type = GetCodecType(current_pt);
+
+  std::vector<PtMappingRule> mappings;
+
+  auto map_outer = [&](uint8_t old_pt, const std::vector<uint8_t>& new_pts) {
+    if (!new_pts.empty()) {
+      mappings.push_back({old_pt, new_pts[0]});
+    }
+  };
+  if (outer_type == kCodecRed && !new_pt_values.red_pts.empty()) {
+    map_outer(current_pt, new_pt_values.red_pts);
+  } else if (outer_type == kCodecUlpfec && !new_pt_values.ulpfec_pts.empty()) {
+    map_outer(current_pt, new_pt_values.ulpfec_pts);
+  } else if (outer_type == kCodecVp9 && !new_pt_values.vp9_pts.empty()) {
+    map_outer(current_pt, new_pt_values.vp9_pts);
+  } else if (outer_type == kCodecRtx && !new_pt_values.rtx_pts.empty()) {
+    map_outer(current_pt, new_pt_values.rtx_pts);
+  }
+
+  // 如果是 RED 包，还需要添加内层 PT 的映射
+  if (outer_type == kCodecRed && packet->payload_size() >= kRedHeaderSize) {
+    uint8_t inner_pt = packet->payload()[0] & 0x7F;
+    CodecType inner_type = GetCodecType(inner_pt);
+    if (inner_type == kCodecUlpfec && !new_pt_values.ulpfec_pts.empty()) {
+      mappings.push_back({inner_pt, new_pt_values.ulpfec_pts[0]});
+    } else if (inner_type == kCodecVp9 && !new_pt_values.vp9_pts.empty()) {
+      mappings.push_back({inner_pt, new_pt_values.vp9_pts[0]});
+    } else if (inner_type == kCodecRtx && !new_pt_values.rtx_pts.empty()) {
+      mappings.push_back({inner_pt, new_pt_values.rtx_pts[0]});
+    }
+  }
+
+  return ModifyPtValues(packet, mappings);
+}
+
+bool RtpPtManipulatorImpl::VerifyModification(const RtpPacket& packet,
+                                              const std::vector<PtMappingRule>& expected_mappings) const {
+  RtpPayloadTypes parsed = ParsePtValues(packet);
+  std::set<uint8_t> expected_new_pts;
+  for (const auto& m : expected_mappings) {
+    expected_new_pts.insert(m.new_pt);
+  }
+  std::vector<uint8_t> actual_pts;
+  auto add = [&](const std::vector<uint8_t>& pts) {
+    actual_pts.insert(actual_pts.end(), pts.begin(), pts.end());
+  };
+  add(parsed.red_pts);
+  add(parsed.ulpfec_pts);
+  add(parsed.vp9_pts);
+  add(parsed.rtx_pts);
+
+  for (uint8_t pt : actual_pts) {
+    if (expected_new_pts.find(pt) == expected_new_pts.end()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace webrtc

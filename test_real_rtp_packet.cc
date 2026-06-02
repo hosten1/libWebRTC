@@ -1,30 +1,11 @@
-/*
- * Test program for RtpPtManipulatorImpl (correct RED+ULPFEC handling)
- * Compile with: ... (link with rtp_pt_manipulator_impl.cc and WebRTC libs)
- */
-
 #include <iostream>
-#include <iomanip>
-#include <memory>
 #include <vector>
 #include "modules/rtp_rtcp/source/rtp_pt_manipulator_impl.h"
 #include "modules/rtp_rtcp/source/rtp_packet.h"
-
-void PrintHexDump(const uint8_t* data, size_t len, const std::string& title) {
-    std::cout << "\n" << title << " (" << len << " bytes):\n";
-    for (size_t i = 0; i < len; ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0')
-                  << static_cast<int>(data[i]) << " ";
-        if ((i + 1) % 16 == 0) std::cout << "\n";
-    }
-    if (len % 16 != 0) std::cout << "\n";
-    std::cout << std::dec;
-}
+#include "rtc_base/copy_on_write_buffer.h"
 
 int main() {
-    std::cout << "=== RtpPtManipulatorImpl Test (Correct RED+ULPFEC) ===\n";
-
-    // Complete raw packet (Ethernet + IP + UDP + RTP) - provided by user
+    // 完整的原始数据包（Ethernet+IP+UDP+RTP，共863字节）
     static const uint8_t raw_packet[] = {
         0x00, 0x0c, 0x29, 0x68, 0xb8, 0xfa, 0x00, 0xe0, 0x4c, 0x68, 0x01, 0x29, 0x08, 0x00, 0x45, 0x00,
         0x03, 0x5f, 0xa1, 0xc9, 0x00, 0x00, 0x3f, 0x11, 0x3c, 0x45, 0xc0, 0xa8, 0x8c, 0x3d, 0xc0, 0xa8,
@@ -83,6 +64,7 @@ int main() {
         0xc3, 0xc0, 0x8f, 0x32, 0x10, 0xa6, 0xe6, 0x26, 0xbc, 0x1a, 0xe7, 0xe4, 0x60
     };
 
+    // 定位 RTP 数据（跳过以太网、IP、UDP 头部）
     size_t ip_offset = 14;
     uint8_t ip_ihl = raw_packet[ip_offset] & 0x0F;
     size_t udp_offset = ip_offset + ip_ihl * 4;
@@ -90,75 +72,54 @@ int main() {
     size_t rtp_offset = udp_offset + 8;
     size_t rtp_size = udp_len - 8;
 
+    // 解析 RTP 包
     rtc::CopyOnWriteBuffer rtp_buffer;
     rtp_buffer.AppendData(raw_packet + rtp_offset, rtp_size);
-    webrtc::RtpPacket original_packet;
-    if (!original_packet.Parse(rtp_buffer)) {
-        std::cout << "Failed to parse RTP packet!\n";
+    webrtc::RtpPacket packet;
+    if (!packet.Parse(rtp_buffer)) {
+        std::cerr << "Failed to parse RTP packet" << std::endl;
         return 1;
     }
 
-    // Old mapping (as seen in the packet)
+    // 配置旧 SDP 映射（原始 PT）
     webrtc::SdpMediaDescription old_sdp;
-    old_sdp.media_type = "video";
     old_sdp.rtpmap[124] = "red/90000";
     old_sdp.rtpmap[123] = "ulpfec/90000";
     old_sdp.rtpmap[127] = "VP9/90000";
     old_sdp.rtpmap[97]  = "rtx/90000";
-    old_sdp.payload_types = {124, 123, 127, 97};
 
-    webrtc::RtpPtManipulatorImpl manipulator;
-    manipulator.ConfigureSdp(old_sdp);
+    webrtc::RtpPtManipulatorImpl manip;
+    manip.ConfigureSdp(old_sdp);
 
-    std::cout << "\n--- Step 1: Parse original packet ---\n";
-    std::cout << "Original outer PT: " << static_cast<int>(original_packet.PayloadType()) << "\n";
-    webrtc::RtpPayloadTypes before = manipulator.ParsePtValues(original_packet);
-    std::cout << "Parsed PT values:\n";
-    if (before.red_pt)    std::cout << "  RED:    " << static_cast<int>(*before.red_pt) << "\n";
-    if (before.ulpfec_pt) std::cout << "  ULPFEC: " << static_cast<int>(*before.ulpfec_pt) << "\n";
-    if (before.vp9_pt)    std::cout << "  VP9:    " << static_cast<int>(*before.vp9_pt) << "\n";
-    if (before.rtx_pt)    std::cout << "  RTX:    " << static_cast<int>(*before.rtx_pt) << "\n";
+    std::cout << "Original outer PT: " << static_cast<int>(packet.PayloadType()) << std::endl;
+    webrtc::RtpPayloadTypes parsed = manip.ParsePtValues(packet);
+    std::cout << "Parsed PTs: " << parsed.ToString() << std::endl;
 
-    // New mapping (desired)
-    webrtc::RtpPayloadTypes new_pt;
-    new_pt.red_pt    = 104;
-    new_pt.ulpfec_pt = 106;
-    new_pt.vp9_pt    = 102;
-    new_pt.rtx_pt    = 103;
+    // 定义映射规则（旧 PT -> 新 PT）
+    std::vector<webrtc::PtMappingRule> mappings = {
+        {124, 104},
+        {123, 106},
+        {127, 102},
+        {97,  103}
+    };
 
-    webrtc::RtpPacket modified_packet = original_packet;
-    if (!manipulator.ModifyPtValues(&modified_packet, new_pt)) {
-        std::cout << "Modification failed!\n";
+    if (!manip.ModifyPtValues(&packet, mappings)) {
+        std::cerr << "Modification failed" << std::endl;
         return 1;
     }
+    std::cout << "After modification, outer PT: " << static_cast<int>(packet.PayloadType()) << std::endl;
 
-    std::cout << "\n--- Step 2: Modification applied ---\n";
-    std::cout << "New outer PT: " << static_cast<int>(modified_packet.PayloadType()) << "\n";
-
-    // Verify with new SDP mapping
+    // 用新 SDP 验证
     webrtc::SdpMediaDescription new_sdp;
     new_sdp.rtpmap[104] = "red/90000";
     new_sdp.rtpmap[106] = "ulpfec/90000";
     new_sdp.rtpmap[102] = "VP9/90000";
     new_sdp.rtpmap[103] = "rtx/90000";
-    new_sdp.payload_types = {104, 106, 102, 103};
+    manip.ConfigureSdp(new_sdp);
+    webrtc::RtpPayloadTypes after = manip.ParsePtValues(packet);
+    std::cout << "After re-parse with new SDP: " << after.ToString() << std::endl;
 
-    manipulator.ConfigureSdp(new_sdp);
-    webrtc::RtpPayloadTypes after = manipulator.ParsePtValues(modified_packet);
-
-    std::cout << "\n--- Step 3: Verify with new mapping ---\n";
-    std::cout << "Parsed PT values after modification:\n";
-    if (after.red_pt)    std::cout << "  RED:    " << static_cast<int>(*after.red_pt) << "\n";
-    if (after.ulpfec_pt) std::cout << "  ULPFEC: " << static_cast<int>(*after.ulpfec_pt) << "\n";
-    if (after.vp9_pt)    std::cout << "  VP9:    " << static_cast<int>(*after.vp9_pt) << "\n";
-    if (after.rtx_pt)    std::cout << "  RTX:    " << static_cast<int>(*after.rtx_pt) << "\n";
-
-    bool verified = manipulator.VerifyModification(modified_packet, new_pt);
-    std::cout << "\nVerifyModification result: " << (verified ? "PASS" : "FAIL") << "\n";
-
-    // Optional: uncomment to see hex dumps
-    // PrintHexDump(original_packet.data(), original_packet.size(), "Original RTP packet");
-    // PrintHexDump(modified_packet.data(), modified_packet.size(), "Modified RTP packet");
-
-    return verified ? 0 : 1;
+    bool ok = manip.VerifyModification(packet, mappings);
+    std::cout << "Verification: " << (ok ? "PASS" : "FAIL") << std::endl;
+    return ok ? 0 : 1;
 }
