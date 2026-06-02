@@ -1,4 +1,5 @@
-
+# 引入公共编译配置模块
+include(${PROJECT_SOURCE_DIR}/cmake/webrtc_build_config.cmake)
 set(WEBRTC_BASE_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/rate_statistics.cc
     ${WEBRTC_SRC_DIR}/rtc_base/experiments/field_trial_parser.cc
@@ -139,6 +140,7 @@ add_library(rtc_base OBJECT
     $<TARGET_OBJECTS:sigslot>
     ${WEBRTC_BASE_SOURCES}
 )
+
 
 target_include_directories(
     rtc_base

@@ -1,5 +1,6 @@
 
-
+# 引入公共编译配置模块
+include(${PROJECT_SOURCE_DIR}/cmake/webrtc_build_config.cmake)
 set(WEBRTC_API_SOURCES
 
     ${WEBRTC_SRC_DIR}/api/transport/bitrate_settings.cc
@@ -109,7 +110,6 @@ endif()
 add_library(api OBJECT
     ${WEBRTC_API_SOURCES}
 )
-
 
 target_include_directories(
     api
