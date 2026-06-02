@@ -10,3 +10,4 @@ mac/libwebrtc.xcodeproj/xcuserdata/*
 deps/*.zip
 build*
 .vs*
+test_cmake/
