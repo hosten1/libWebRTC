@@ -1,29 +1,30 @@
 /*
- * Test program for RtpPtManipulatorImpl: complete test including PT recovery
+ * Test program for RtpPtManipulatorImpl (correct RED+ULPFEC handling)
+ * Compile with: ... (link with rtp_pt_manipulator_impl.cc and WebRTC libs)
  */
 
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include <vector>
 #include "modules/rtp_rtcp/source/rtp_pt_manipulator_impl.h"
 #include "modules/rtp_rtcp/source/rtp_packet.h"
 
-// Helper to print raw hex of ULPFEC header (first 10 bytes)
-void PrintUlpfecHeader(const uint8_t* payload, size_t len) {
-    if (len < 10) return;
-    std::cout << "ULPFEC Level0 Header (10 bytes): ";
-    for (size_t i = 0; i < 10; ++i) {
-        printf("%02x ", payload[i]);
+void PrintHexDump(const uint8_t* data, size_t len, const std::string& title) {
+    std::cout << "\n" << title << " (" << len << " bytes):\n";
+    for (size_t i = 0; i < len; ++i) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<int>(data[i]) << " ";
+        if ((i + 1) % 16 == 0) std::cout << "\n";
     }
-    std::cout << std::endl;
-    uint8_t pt_recovery = payload[1] & 0x7F;
-    std::cout << "  PT recovery (from byte1 bits0-6) = " << (int)pt_recovery << std::endl;
+    if (len % 16 != 0) std::cout << "\n";
+    std::cout << std::dec;
 }
 
 int main() {
-    std::cout << "=== RtpPtManipulatorImpl Test (including PT recovery) ===" << std::endl;
+    std::cout << "=== RtpPtManipulatorImpl Test (Correct RED+ULPFEC) ===\n";
 
-    // Complete raw packet data (Ethernet + IP + UDP + RTP)
+    // Complete raw packet (Ethernet + IP + UDP + RTP) - provided by user
     static const uint8_t raw_packet[] = {
         0x00, 0x0c, 0x29, 0x68, 0xb8, 0xfa, 0x00, 0xe0, 0x4c, 0x68, 0x01, 0x29, 0x08, 0x00, 0x45, 0x00,
         0x03, 0x5f, 0xa1, 0xc9, 0x00, 0x00, 0x3f, 0x11, 0x3c, 0x45, 0xc0, 0xa8, 0x8c, 0x3d, 0xc0, 0xa8,
@@ -82,8 +83,6 @@ int main() {
         0xc3, 0xc0, 0x8f, 0x32, 0x10, 0xa6, 0xe6, 0x26, 0xbc, 0x1a, 0xe7, 0xe4, 0x60
     };
 
-    size_t packet_size = sizeof(raw_packet);
-    // Locate RTP start (UDP payload)
     size_t ip_offset = 14;
     uint8_t ip_ihl = raw_packet[ip_offset] & 0x0F;
     size_t udp_offset = ip_offset + ip_ihl * 4;
@@ -95,104 +94,71 @@ int main() {
     rtp_buffer.AppendData(raw_packet + rtp_offset, rtp_size);
     webrtc::RtpPacket original_packet;
     if (!original_packet.Parse(rtp_buffer)) {
-        std::cout << "Failed to parse RTP packet!" << std::endl;
+        std::cout << "Failed to parse RTP packet!\n";
         return 1;
     }
 
-    std::cout << "\n--- Step 1: Parse original packet (old mapping) ---" << std::endl;
-    std::cout << "Original outer PT: " << static_cast<int>(original_packet.PayloadType()) << std::endl;
-
-    // Old SDP mapping
+    // Old mapping (as seen in the packet)
     webrtc::SdpMediaDescription old_sdp;
     old_sdp.media_type = "video";
-    old_sdp.rtpmap[127] = "VP9/90000";
-    old_sdp.rtpmap[97]  = "rtx/90000";
     old_sdp.rtpmap[124] = "red/90000";
     old_sdp.rtpmap[123] = "ulpfec/90000";
-    old_sdp.payload_types = {127, 97, 124, 123};
+    old_sdp.rtpmap[127] = "VP9/90000";
+    old_sdp.rtpmap[97]  = "rtx/90000";
+    old_sdp.payload_types = {124, 123, 127, 97};
 
-    webrtc::RtpPtManipulatorImpl manipulator_old;
-    manipulator_old.ConfigureSdp(old_sdp);
+    webrtc::RtpPtManipulatorImpl manipulator;
+    manipulator.ConfigureSdp(old_sdp);
 
-    webrtc::RtpPayloadTypes before_pt = manipulator_old.ParsePtValues(original_packet);
-    std::cout << "PT values before modification:" << std::endl;
-    if (before_pt.vp9_pt)    std::cout << "  VP9:    " << static_cast<int>(*before_pt.vp9_pt) << std::endl;
-    if (before_pt.red_pt)    std::cout << "  RED:    " << static_cast<int>(*before_pt.red_pt) << std::endl;
-    if (before_pt.ulpfec_pt) std::cout << "  ULPFEC: " << static_cast<int>(*before_pt.ulpfec_pt) << std::endl;
-    if (before_pt.rtx_pt)    std::cout << "  RTX:    " << static_cast<int>(*before_pt.rtx_pt) << std::endl;
+    std::cout << "\n--- Step 1: Parse original packet ---\n";
+    std::cout << "Original outer PT: " << static_cast<int>(original_packet.PayloadType()) << "\n";
+    webrtc::RtpPayloadTypes before = manipulator.ParsePtValues(original_packet);
+    std::cout << "Parsed PT values:\n";
+    if (before.red_pt)    std::cout << "  RED:    " << static_cast<int>(*before.red_pt) << "\n";
+    if (before.ulpfec_pt) std::cout << "  ULPFEC: " << static_cast<int>(*before.ulpfec_pt) << "\n";
+    if (before.vp9_pt)    std::cout << "  VP9:    " << static_cast<int>(*before.vp9_pt) << "\n";
+    if (before.rtx_pt)    std::cout << "  RTX:    " << static_cast<int>(*before.rtx_pt) << "\n";
 
-    // Directly inspect ULPFEC header if present
-    if (before_pt.red_pt && before_pt.ulpfec_pt) {
-        const uint8_t* rtp_payload = original_packet.payload().data();
-        size_t rtp_payload_len = original_packet.payload_size();
-        if (rtp_payload_len >= 1) {
-            uint8_t red_byte = rtp_payload[0];
-            uint8_t inner_pt = red_byte & 0x7F;
-            if ((red_byte & 0x80) == 0 && inner_pt == 123) {
-                const uint8_t* ulpfec_data = rtp_payload + 1;
-                size_t ulpfec_len = rtp_payload_len - 1;
-                std::cout << "\nInspecting ULPFEC header directly:" << std::endl;
-                PrintUlpfecHeader(ulpfec_data, ulpfec_len);
-            }
-        }
-    }
-
-    // --- Step 2: Modify both outer RED/ULPFEC types and the PT recovery ---
-    webrtc::RtpPayloadTypes new_pt_values;
-    if (before_pt.red_pt)    new_pt_values.red_pt    = 104;
-    if (before_pt.ulpfec_pt) new_pt_values.ulpfec_pt = 106;
-    new_pt_values.vp9_pt = 102;   // Force update PT recovery to 102
+    // New mapping (desired)
+    webrtc::RtpPayloadTypes new_pt;
+    new_pt.red_pt    = 104;
+    new_pt.ulpfec_pt = 106;
+    new_pt.vp9_pt    = 102;
+    new_pt.rtx_pt    = 103;
 
     webrtc::RtpPacket modified_packet = original_packet;
-    bool mod_ok = manipulator_old.ModifyPtValues(&modified_packet, new_pt_values);
-    if (!mod_ok) {
-        std::cout << "Modification failed!" << std::endl;
+    if (!manipulator.ModifyPtValues(&modified_packet, new_pt)) {
+        std::cout << "Modification failed!\n";
         return 1;
     }
-    std::cout << "\n--- Step 2: Modification applied ---" << std::endl;
-    std::cout << "New outer PT after modification: " << static_cast<int>(modified_packet.PayloadType()) << std::endl;
 
-    // --- Step 3: Verify using new SDP mapping ---
+    std::cout << "\n--- Step 2: Modification applied ---\n";
+    std::cout << "New outer PT: " << static_cast<int>(modified_packet.PayloadType()) << "\n";
+
+    // Verify with new SDP mapping
     webrtc::SdpMediaDescription new_sdp;
-    new_sdp.media_type = "video";
-    new_sdp.rtpmap[102] = "VP9/90000";
-    new_sdp.rtpmap[103] = "rtx/90000";
     new_sdp.rtpmap[104] = "red/90000";
     new_sdp.rtpmap[106] = "ulpfec/90000";
-    new_sdp.payload_types = {102, 103, 104, 106};
+    new_sdp.rtpmap[102] = "VP9/90000";
+    new_sdp.rtpmap[103] = "rtx/90000";
+    new_sdp.payload_types = {104, 106, 102, 103};
 
-    webrtc::RtpPtManipulatorImpl manipulator_verify;
-    manipulator_verify.ConfigureSdp(new_sdp);
-    webrtc::RtpPayloadTypes after_pt = manipulator_verify.ParsePtValues(modified_packet);
+    manipulator.ConfigureSdp(new_sdp);
+    webrtc::RtpPayloadTypes after = manipulator.ParsePtValues(modified_packet);
 
-    std::cout << "\n--- Step 3: Verify with new mapping ---" << std::endl;
-    std::cout << "PT values after modification:" << std::endl;
-    if (after_pt.vp9_pt)    std::cout << "  VP9:    " << static_cast<int>(*after_pt.vp9_pt) << std::endl;
-    if (after_pt.red_pt)    std::cout << "  RED:    " << static_cast<int>(*after_pt.red_pt) << std::endl;
-    if (after_pt.ulpfec_pt) std::cout << "  ULPFEC: " << static_cast<int>(*after_pt.ulpfec_pt) << std::endl;
-    if (after_pt.rtx_pt)    std::cout << "  RTX:    " << static_cast<int>(*after_pt.rtx_pt) << std::endl;
+    std::cout << "\n--- Step 3: Verify with new mapping ---\n";
+    std::cout << "Parsed PT values after modification:\n";
+    if (after.red_pt)    std::cout << "  RED:    " << static_cast<int>(*after.red_pt) << "\n";
+    if (after.ulpfec_pt) std::cout << "  ULPFEC: " << static_cast<int>(*after.ulpfec_pt) << "\n";
+    if (after.vp9_pt)    std::cout << "  VP9:    " << static_cast<int>(*after.vp9_pt) << "\n";
+    if (after.rtx_pt)    std::cout << "  RTX:    " << static_cast<int>(*after.rtx_pt) << "\n";
 
-    // Dump modified ULPFEC header
-    if (after_pt.red_pt && after_pt.ulpfec_pt) {
-        const uint8_t* rtp_payload = modified_packet.payload().data();
-        size_t rtp_payload_len = modified_packet.payload_size();
-        if (rtp_payload_len >= 1) {
-            uint8_t red_byte = rtp_payload[0];
-            if ((red_byte & 0x80) == 0 && ((red_byte & 0x7F) == 106)) {
-                const uint8_t* ulpfec_data = rtp_payload + 1;
-                size_t ulpfec_len = rtp_payload_len - 1;
-                std::cout << "\nInspecting modified ULPFEC header:" << std::endl;
-                PrintUlpfecHeader(ulpfec_data, ulpfec_len);
-            }
-        }
-    }
+    bool verified = manipulator.VerifyModification(modified_packet, new_pt);
+    std::cout << "\nVerifyModification result: " << (verified ? "PASS" : "FAIL") << "\n";
 
-    bool success = true;
-    if (new_pt_values.red_pt && (!after_pt.red_pt || *after_pt.red_pt != *new_pt_values.red_pt)) success = false;
-    if (new_pt_values.ulpfec_pt && (!after_pt.ulpfec_pt || *after_pt.ulpfec_pt != *new_pt_values.ulpfec_pt)) success = false;
-    if (new_pt_values.vp9_pt && (!after_pt.vp9_pt || *after_pt.vp9_pt != *new_pt_values.vp9_pt)) success = false;
+    // Optional: uncomment to see hex dumps
+    // PrintHexDump(original_packet.data(), original_packet.size(), "Original RTP packet");
+    // PrintHexDump(modified_packet.data(), modified_packet.size(), "Modified RTP packet");
 
-    std::cout << "\nVerification result: " << (success ? "PASS" : "FAIL") << std::endl;
-    std::cout << "=== Test completed ===" << std::endl;
-    return success ? 0 : 1;
+    return verified ? 0 : 1;
 }

@@ -89,11 +89,11 @@ class RtpPtManipulatorImpl {
 
   void ConfigureSdp(const SdpMediaDescription& sdp);
 
-  // Parse PT values from an RTP packet, including any nested RED/ULPFEC.
+  // Parse PT values from an RTP packet (RTP header + RED blocks if present).
   RtpPayloadTypes ParsePtValues(const RtpPacket& packet) const;
 
-  // Modify PT values inside the packet (outer and nested) according to
-  // new_pt_values. Returns true if successful.
+  // Modify PT values inside the packet (outer RTP PT and RED block PTs only).
+  // Does NOT touch ULPFEC header's PT recovery field.
   bool ModifyPtValues(RtpPacket* packet, const RtpPayloadTypes& new_pt_values);
 
   // Verify that a modified packet contains the expected PT values.
@@ -101,27 +101,21 @@ class RtpPtManipulatorImpl {
                           const RtpPayloadTypes& expected_pt_values) const;
 
  private:
-  // RED header size used by WebRTC (1 byte, no timestamp offset or block length).
-  static constexpr size_t kRedHeaderSize = 1;
+  struct RedBlock {
+    bool is_last;
+    uint8_t payload_type;
+    uint16_t timestamp_offset;
+    uint16_t block_length;
+    size_t offset;  // offset in payload where this block's data starts
+  };
 
-  // ULPFEC Level 0 header size (RFC 5109).
-  static constexpr size_t kUlpfecLevel0HeaderSize = 10;
+  // Parse RED header blocks according to RFC 2198.
+  bool ParseRedBlocks(const uint8_t* payload, size_t payload_size,
+                      std::vector<RedBlock>& blocks) const;
 
-  // Parse a RED payload (1-byte header, then inner packet).
-  bool ParseRedPayload(const uint8_t* payload, size_t payload_size,
-                       RtpPayloadTypes& pt_values) const;
-
-  // Parse ULPFEC payload and extract the protected media PT (PT recovery).
-  bool ParseUlpfecPayload(const uint8_t* payload, size_t payload_size,
-                          RtpPayloadTypes& pt_values) const;
-
-  // Modify inner payload of a RED packet.
-  bool ModifyRedPayload(uint8_t* payload, size_t payload_size,
-                        const RtpPayloadTypes& new_pt_values) const;
-
-  // Modify ULPFEC payload (update PT recovery field).
-  bool ModifyUlpfecPayload(uint8_t* payload, size_t payload_size,
-                           const RtpPayloadTypes& new_pt_values) const;
+  // Modify PTs inside RED blocks (does not change data payloads).
+  bool ModifyRedBlocks(uint8_t* payload, size_t payload_size,
+                       const RtpPayloadTypes& new_pt_values) const;
 
   bool IsRedPacket(uint8_t pt) const;
   bool IsUlpfecPacket(uint8_t pt) const;
@@ -129,6 +123,11 @@ class RtpPtManipulatorImpl {
   bool IsRtxPacket(uint8_t pt) const;
 
   SdpMediaDescription sdp_;
+  // Cached PT values for fast lookup.
+  absl::optional<uint8_t> red_pt_;
+  absl::optional<uint8_t> ulpfec_pt_;
+  absl::optional<uint8_t> vp9_pt_;
+  absl::optional<uint8_t> rtx_pt_;
 };
 
 }  // namespace webrtc
