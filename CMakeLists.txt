@@ -121,6 +121,15 @@ else()
 endif()
 # red sorce end
 
+# RTP PT manipulator (for parsing and modifying RTP payload type values)
+if(WEBRTC_BUILD_RED OR WEBRTC_BUILD_FEC)
+    message(STATUS "[libwebrtc] Adding RTP PT manipulator modules...")
+    list(APPEND WEBRTC_SOURCES
+        ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_pt_manipulator_impl.cc
+    )
+    message(STATUS "[libwebrtc] RTP PT manipulator modules added")
+endif()
+
 # lym fec decode
 if(WEBRTC_BUILD_FEC)
     message(STATUS "[libwebrtc] Adding FEC modules (Forward Error Correction)...")
