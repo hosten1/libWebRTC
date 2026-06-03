@@ -160,11 +160,12 @@ int main() {
         return 1;
     }
 
-    webrtc::ForwardErrorCorrection::Packet fec_packet;
-    memcpy(fec_packet.data, ulpfec_start, ulpfec_len);
-    fec_packet.length = ulpfec_len;
+    rtc::scoped_refptr<webrtc::ForwardErrorCorrection::Packet> fec_packet(
+        new webrtc::ForwardErrorCorrection::Packet());
+    memcpy(fec_packet->data, ulpfec_start, ulpfec_len);
+    fec_packet->length = ulpfec_len;
     webrtc::ForwardErrorCorrection::ReceivedFecPacket received_fec;
-    received_fec.pkt = &fec_packet;
+    received_fec.pkt = fec_packet;
     received_fec.ssrc = packet.Ssrc();
     webrtc::UlpfecHeaderReader reader;
     bool native_ok = reader.ReadFecHeader(&received_fec);
