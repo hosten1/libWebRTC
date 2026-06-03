@@ -3,16 +3,20 @@
 if(NOT WEBRTC_SRC_DIR)
     message(FATAL_ERROR "WEBRTC_SRC_DIR required")
 endif()
-add_library(ooura STATIC
+
+set(WEBRTC_COMMON_AUDIO_OOURA_SOURCES
      ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft.cc
      ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft.h
      ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_common.h
      ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_256/fft4g.cc
      ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_256/fft4g.h
+
+
 )
+
 # 判断 x86 或 x64 架构（涵盖 i386/i686/x86_64/AMD64）
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
-    list(APPEND ooura
+    list(APPEND WEBRTC_COMMON_AUDIO_OOURA_SOURCES
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_neon_sse2.h
     )
@@ -24,10 +28,16 @@ endif()
 
 # 判断 MIPS 架构
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^mips.*")
-    list(APPEND ooura
+    list(APPEND WEBRTC_COMMON_AUDIO_OOURA_SOURCES
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_mips.cc
     )
 endif()
+
+
+add_library(ooura OBJECT 
+    ${WEBRTC_COMMON_AUDIO_OOURA_SOURCES}
+    
+)
 
 # 添加头文件目录
 target_include_directories(ooura

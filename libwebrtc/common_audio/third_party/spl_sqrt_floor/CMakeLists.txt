@@ -3,9 +3,16 @@
 if(NOT WEBRTC_SRC_DIR)
     message(FATAL_ERROR "WEBRTC_SRC_DIR required")
 endif()
-add_library(spl_sqrt_floor STATIC
-     ${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
+
+set(WEBRTC_COMMON_AUDIO_SPL_SQRT_FLOOR_SOURCES
+    ${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
      ${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.h
+
+
+)
+add_library(spl_sqrt_floor OBJECT
+    ${WEBRTC_COMMON_AUDIO_SPL_SQRT_FLOOR_SOURCES}
+     
 )
 
 # 添加头文件目录

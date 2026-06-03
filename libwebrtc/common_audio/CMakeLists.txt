@@ -39,8 +39,13 @@ set_source_files_properties(
     PROPERTIES LANGUAGE C
 )
 
+add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/ooura)
+add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor)
+
 add_library(common_audio_module OBJECT
     ${WEBRTC_COMMON_AUDIO_SOURCES}
+    $<TARGET_OBJECTS:ooura>
+    $<TARGET_OBJECTS:spl_sqrt_floor>
 )
 
 target_include_directories(

@@ -48,8 +48,6 @@ add_subdirectory(${WEBRTC_SRC_DIR}/modules)
 
 # 第三方依赖
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
-add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/ooura)
-add_subdirectory(${WEBRTC_SRC_DIR}/common_audio/third_party/spl_sqrt_floor)
 
 # ==================== 创建 libwebrtc 主库 ====================
 add_library(libwebrtc STATIC
@@ -149,7 +147,9 @@ install(DIRECTORY ${WEBRTC_SRC_DIR}/call/
         DESTINATION include/webrtc/call
         FILES_MATCHING PATTERN "*.h")
 
-# ==================== 测试程序 ====================
+
+if(WIN32)
+        # ==================== 测试程序 ====================
 add_executable(test_real_rtp_packet test/test_real_rtp_packet.cc)
 target_link_libraries(test_real_rtp_packet PRIVATE
     libwebrtc
@@ -162,7 +162,9 @@ target_link_libraries(test_webrtc_threading PRIVATE
     abseil
 )
 
-if(WIN32)
-    target_link_libraries(test_real_rtp_packet PRIVATE ws2_32 winmm)
-    target_link_libraries(test_webrtc_threading PRIVATE ws2_32 winmm)
+        if(WIN32)
+        target_link_libraries(test_real_rtp_packet PRIVATE ws2_32 winmm)
+        target_link_libraries(test_webrtc_threading PRIVATE ws2_32 winmm)
+        endif()
 endif()
+

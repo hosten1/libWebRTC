@@ -87,7 +87,7 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
 
     # thread_registry.cc 只在 Android 平台且非 Chromium 构建时编译
     if(ANDROID AND NOT WEBRTC_CHROMIUM_BUILD)
-        list(APPEND WEBRTC_BASE_SOURCES ${WEBRTC_SRC_DIR}/rtc_base/system/thread_registry.cc)
+        # list(APPEND WEBRTC_BASE_SOURCES ${WEBRTC_SRC_DIR}/rtc_base/system/thread_registry.cc)
     endif()
 
     # 这个原来是在webrtc的rtc_base/build.gn里的rtc_base_test_utils中使用，只有这个使用了cpu_time.cc,也只有wind和mac Linux、FUCHSIA支持 
