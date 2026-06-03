@@ -64,9 +64,9 @@ bool TestBasicThreadLifecycle() {
     auto thread = rtc::Thread::Create();
     thread->SetName("TestThread1", nullptr);
     std::cout << "  Thread name: " << thread->name() << std::endl;
-    std::cout << "  IsOwned: " << thread->IsOwned() << std::endl;
 
     thread->Start();
+    std::cout << "  IsOwned: " << thread->IsOwned() << std::endl;
     std::cout << "  RunningForTest: " << thread->RunningForTest() << std::endl;
 
     // 用 Invoke 验证线程正在运行
@@ -405,6 +405,7 @@ bool TestMultiThreadPostTaskInterleaving() {
     std::cout << "\n--- Test 12: MultiThread PostTask interleaving ---" << std::endl;
 
     g_test_counter.store(0);
+    rtc::Event all_done;
     auto thread_a = rtc::Thread::Create();
     auto thread_b = rtc::Thread::Create();
     thread_a->SetName("ThreadA", nullptr);
@@ -412,24 +413,19 @@ bool TestMultiThreadPostTaskInterleaving() {
     thread_a->Start();
     thread_b->Start();
 
-    // ThreadA 向 ThreadB 投递任务
-    thread_a->PostTask(RTC_FROM_HERE, [&thread_b]() {
+    // ThreadA 向 ThreadB 投递任务，完成后设置事件
+    thread_a->PostTask(RTC_FROM_HERE, [&thread_b, &all_done]() {
         std::cout << "    ThreadA: posting task to ThreadB" << std::endl;
-        thread_b->PostTask(RTC_FROM_HERE, []() {
+        g_test_counter.fetch_add(1);
+        thread_b->PostTask(RTC_FROM_HERE, [&all_done]() {
             g_test_counter.fetch_add(1);
             std::cout << "    ThreadB: received task from ThreadA" << std::endl;
+            all_done.Set();
         });
-        g_test_counter.fetch_add(1);
     });
 
-    // 用 Invoke 同步 ThreadA 完成
-    thread_a->Invoke<void>(RTC_FROM_HERE, []() {
-        // 等待 ThreadA 的任务完成
-    });
-    // 用 Invoke 同步 ThreadB 完成
-    thread_b->Invoke<void>(RTC_FROM_HERE, []() {
-        // 等待 ThreadB 的任务完成
-    });
+    // 等待交叉任务完成
+    all_done.Wait(rtc::Event::kForever);
 
     int count = g_test_counter.load();
     std::cout << "  Cross-thread tasks: " << count << std::endl;

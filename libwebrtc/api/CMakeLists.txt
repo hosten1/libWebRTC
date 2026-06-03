@@ -78,12 +78,14 @@ endif()
 # video modules
 if(WEBRTC_BUILD_VIDEO)
     message(STATUS "[libwebrtc] Adding video modules...")
-    list(APPEND WEBRTC_SOURCES
+    list(APPEND WEBRTC_API_SOURCES
         ${WEBRTC_SRC_DIR}/api/video/encoded_image.cc
         ${WEBRTC_SRC_DIR}/api/video/video_bitrate_allocation.cc
         ${WEBRTC_SRC_DIR}/api/video/video_frame_buffer.cc
+        ${WEBRTC_SRC_DIR}/api/video/video_frame.cc
         ${WEBRTC_SRC_DIR}/api/video_codecs/video_codec.cc
         ${WEBRTC_SRC_DIR}/api/video_codecs/video_decoder.cc
+        ${WEBRTC_SRC_DIR}/api/video_codecs/video_encoder.cc
         ${WEBRTC_SRC_DIR}/api/video/video_timing.cc
         ${WEBRTC_SRC_DIR}/api/video/video_content_type.cc
         ${WEBRTC_SRC_DIR}/api/video/hdr_metadata.cc

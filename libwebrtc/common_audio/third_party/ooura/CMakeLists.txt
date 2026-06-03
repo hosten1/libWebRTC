@@ -22,6 +22,13 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
     endif()
 endif()
 
+# 判断 MIPS 架构
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^mips.*")
+    list(APPEND ooura
+        ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_mips.cc
+    )
+endif()
+
 # 添加头文件目录
 target_include_directories(ooura
     PUBLIC
