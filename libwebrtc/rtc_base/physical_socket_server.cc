@@ -51,21 +51,6 @@
 #include "rtc_base/null_socket_server.h"
 #include "rtc_base/time_utils.h"
 
-#if defined(WEBRTC_LINUX)
-#include <linux/sockios.h>
-#endif
-
-#if defined(WEBRTC_WIN) || defined(WEBRTC_MAC) || \
-    defined(WEBRTC_POSIX)  // add by lxy
-#include "rtc_base/openssl_utility.h"
-#include "system_wrappers/include/field_trial.h"
-unsigned char iv[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-unsigned char key[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-unsigned char* ptrKey = key;
-unsigned char* ptrIv = iv;
-#endif
-
 #if defined(WEBRTC_WIN)
 #define LAST_SYSTEM_ERROR (::GetLastError())
 #elif defined(__native_client__) && __native_client__
@@ -150,11 +135,6 @@ PhysicalSocket::~PhysicalSocket() {
 bool PhysicalSocket::Create(int family, int type) {
   Close();
   s_ = ::socket(family, type, 0);
-
-  RTC_LOG(LS_VERBOSE) << "[vrv_wy] PhysicalSocket::Create family=" << family
-                      << ",type=" << type << ",result="
-                      << (s_ == INVALID_SOCKET ? "fail." : "succ.");
-
   udp_ = (SOCK_DGRAM == type);
   UpdateLastError();
   if (udp_) {
@@ -198,25 +178,9 @@ int PhysicalSocket::Bind(const SocketAddress& bind_addr) {
   // If a network binder is available, use it to bind a socket to an interface
   // instead of bind(), since this is more reliable on an OS with a weak host
   // model.
-  RTC_LOG(LS_INFO) << "lipan0809-- Bind  SocketAddress: "
-                   << bind_addr.ToString();
   if (ss_->network_binder() && !bind_addr.IsAnyIP()) {
-    RTC_LOG(LS_INFO) << "[20220220] PhysicalSocket::Bind for network_binder";
-
     NetworkBindingResult result =
         ss_->network_binder()->BindSocketToNetwork(s_, bind_addr.ipaddr());
-
-    RTC_LOG(LS_INFO) << "[20220220] BindSocketToNetwork ret = " << result;
-
-    // wangYan fix bind failed begin
-#if defined(WEBRTC_ANDROID)
-    if (result == NetworkBindingResult::FAILURE) {
-      RTC_LOG(LS_INFO) << "[vrv_wy] BindSocketToNetwork return FAILURE!";
-      result = NetworkBindingResult::SUCCESS;
-    }
-#endif
-    // wangYan end
-
     if (result == NetworkBindingResult::SUCCESS) {
       // Since the network binder handled binding the socket to the desired
       // network interface, we don't need to (and shouldn't) include an IP in
@@ -225,18 +189,7 @@ int PhysicalSocket::Bind(const SocketAddress& bind_addr) {
     } else if (result == NetworkBindingResult::NOT_IMPLEMENTED) {
       RTC_LOG(LS_INFO) << "Can't bind socket to network because "
                           "network binding is not implemented for this OS.";
-    }
-#if defined(WEBRTC_ANDROID)
-    // lym 修改 20220225
-    else if (result == NetworkBindingResult::ADDRESS_NOT_FOUND) {
-      RTC_LOG(LS_INFO)
-          << " 【lym 20220225】 Can't bind socket to network because "
-             "network address is not found for this OS.[20231116 return]";
-      return -1;
-      // lym 修改 20220225
-    }
-#endif
-    else {
+    } else {
       if (bind_addr.IsLoopbackIP()) {
         // If we couldn't bind to a loopback IP (which should only happen in
         // test scenarios), continue on. This may be expected behavior.
@@ -255,25 +208,10 @@ int PhysicalSocket::Bind(const SocketAddress& bind_addr) {
       }
     }
   }
-
   sockaddr_storage addr_storage;
   size_t len = copied_bind_addr.ToSockAddrStorage(&addr_storage);
   sockaddr* addr = reinterpret_cast<sockaddr*>(&addr_storage);
   int err = ::bind(s_, addr, static_cast<int>(len));
-
-  RTC_LOG(LS_INFO) << "[vrv_wy] PhysicalSocket::Bind for ::bind() addr="
-                   << bind_addr.ToString();
-  RTC_LOG(LS_INFO) << "[vrv_wy] PhysicalSocket::Bind for ::bind() copied_addr="
-                   << bind_addr.ToString() << ",code=" << err;
-  if (err < 0) {
-#if defined(WIN32) || defined(_WIN32)
-    RTC_LOG(LS_ERROR) << "[vrv_wy] fail wsa_code=" << ::WSAGetLastError();
-#else
-    RTC_LOG(LS_ERROR) << "[vrv_wy] fail wsa_info=" << strerror(errno)
-                      << ",wsa_code=" << errno;
-#endif
-  }
-
   UpdateLastError();
 #if !defined(NDEBUG)
   if (0 == err) {
@@ -340,32 +278,11 @@ AsyncSocket::ConnState PhysicalSocket::GetState() const {
   return state_;
 }
 
-bool checkSocketIpv6(int sock) {
-    struct sockaddr_storage addr;
-    socklen_t addr_len = sizeof(addr);
-    if (getsockname(sock, (struct sockaddr*)&addr, &addr_len) == 0) {
-        if (addr.ss_family == AF_INET6) {
-          return true;
-        }else{
-          return false;
-        }
-    } else {
-       RTC_LOG(LS_ERROR) << "getsockname failed";
-    }
-    return false;
-}
-
 int PhysicalSocket::GetOption(Option opt, int* value) {
   int slevel;
   int sopt;
   if (TranslateOption(opt, &slevel, &sopt) == -1)
     return -1;
-  if(OPT_DSCP == opt){
-    RTC_LOG(LS_VERBOSE) << "get DSCP = "<<value;
-    // 设置 IP_TOS（IPv4）或 IPV6_TCLASS（IPv6）
-    slevel = checkSocketIpv6(s_) == false ? IPPROTO_IP : IPPROTO_IPV6;
-    sopt   = checkSocketIpv6(s_) == false ? IP_TOS : IPV6_TCLASS;
-  }
   socklen_t optlen = sizeof(*value);
   int ret = ::getsockopt(s_, slevel, sopt, (SockOptArg)value, &optlen);
   if (ret != -1 && opt == OPT_DONTFRAGMENT) {
@@ -375,6 +292,7 @@ int PhysicalSocket::GetOption(Option opt, int* value) {
   }
   return ret;
 }
+
 int PhysicalSocket::SetOption(Option opt, int value) {
   int slevel;
   int sopt;
@@ -385,80 +303,30 @@ int PhysicalSocket::SetOption(Option opt, int value) {
     value = (value) ? IP_PMTUDISC_DO : IP_PMTUDISC_DONT;
 #endif
   }
-  if(OPT_DSCP == opt){
-    value = value << 2;  // IP_TOS 是 8 位，DSCP 占高 6 位，所以左移 2 位
-    RTC_LOG(LS_VERBOSE) << "set DSCP = "<<value;
-    // 设置 IP_TOS（IPv4）或 IPV6_TCLASS（IPv6）
-    slevel = checkSocketIpv6(s_) == false ? IPPROTO_IP : IPPROTO_IPV6;
-    sopt   = checkSocketIpv6(s_) == false ? IP_TOS : IPV6_TCLASS;
-  }
   return ::setsockopt(s_, slevel, sopt, (SockOptArg)&value, sizeof(value));
 }
 
 int PhysicalSocket::Send(const void* pv, size_t cb) {
-  // xtc add gmssl encrytpo
-  int sent = 0;
-  if (webrtc::field_trial::IsEnabled("WebRTC-Start-SM4")) {
-    char* ciphertext = nullptr;
-    int cipherLen = 0;
-    int length = static_cast<int>(cb);
-    ciphertext = (char*)malloc(length * 2);
-    memset(ciphertext, 0, length * 2);
-#ifndef OPENSSL_IS_BORINGSSL
-    cipherLen = rtc::openssl::gmsslEncrypt((unsigned char*)pv, length, ptrKey,
-                                           ptrIv, (unsigned char*)ciphertext);
-#endif
-    if (cipherLen <= 0) {
-      RTC_LOG(LS_ERROR) << "PhysicalSocket::Send encrypt failed! cipherLen = "
-                        << cipherLen;
-    }
-    sent = DoSend(
-        s_, reinterpret_cast<const char*>(ciphertext),
-        static_cast<int>(cipherLen),
+  int sent = DoSend(
+      s_, reinterpret_cast<const char*>(pv), static_cast<int>(cb),
 #if defined(WEBRTC_LINUX) && !defined(WEBRTC_ANDROID)
-        // Suppress SIGPIPE. Without this, attempting to send on a socket whose
-        // other end is closed will result in a SIGPIPE signal being raised to
-        // our process, which by default will terminate the process, which we
-        // don't want. By specifying this flag, we'll just get the error EPIPE
-        // instead and can handle the error gracefully.
-        MSG_NOSIGNAL
+      // Suppress SIGPIPE. Without this, attempting to send on a socket whose
+      // other end is closed will result in a SIGPIPE signal being raised to
+      // our process, which by default will terminate the process, which we
+      // don't want. By specifying this flag, we'll just get the error EPIPE
+      // instead and can handle the error gracefully.
+      MSG_NOSIGNAL
 #else
-        0
+      0
 #endif
-    );
-    if (ciphertext) {
-      free(ciphertext);
-    }
-    UpdateLastError();
-    MaybeRemapSendError();
-    // We have seen minidumps where this may be false.
-    RTC_DCHECK(sent <= static_cast<int>(cipherLen));
-    if ((sent > 0 && sent < static_cast<int>(cipherLen)) ||
-        (sent < 0 && IsBlockingError(GetError()))) {
-      EnableEvents(DE_WRITE);
-    }
-  } else {
-    sent = DoSend(
-        s_, reinterpret_cast<const char*>(pv), static_cast<int>(cb),
-#if defined(WEBRTC_LINUX) && !defined(WEBRTC_ANDROID)
-        // Suppress SIGPIPE. Without this, attempting to send on a socket whose
-        // other end is closed will result in a SIGPIPE signal being raised to
-        // our process, which by default will terminate the process, which we
-        // don't want. By specifying this flag, we'll just get the error EPIPE
-        // instead and can handle the error gracefully.
-        MSG_NOSIGNAL
-#else
-        0
-#endif
-    );
-    UpdateLastError();
-    MaybeRemapSendError();
-    // We have seen minidumps where this may be false.
-    RTC_DCHECK(sent <= static_cast<int>(cb));
-    if ((sent > 0 && sent < static_cast<int>(cb)) ||
-        (sent < 0 && IsBlockingError(GetError()))) {
-      EnableEvents(DE_WRITE);
-    }
+      );
+  UpdateLastError();
+  MaybeRemapSendError();
+  // We have seen minidumps where this may be false.
+  RTC_DCHECK(sent <= static_cast<int>(cb));
+  if ((sent > 0 && sent < static_cast<int>(cb)) ||
+      (sent < 0 && IsBlockingError(GetError()))) {
+    EnableEvents(DE_WRITE);
   }
   return sent;
 }
@@ -467,64 +335,23 @@ int PhysicalSocket::SendTo(const void* buffer,
                            size_t length,
                            const SocketAddress& addr) {
   sockaddr_storage saddr;
-  int sent = 0;
-  // xtc add gmssl encrytpo
-  char* ciphertext = nullptr;
-  int cipherLen = 0;
-  if (webrtc::field_trial::IsEnabled("WebRTC-Start-SM4")) {
-    ciphertext = (char*)malloc(length * 2);
-    memset(ciphertext, 0, length * 2);
-#ifndef OPENSSL_IS_BORINGSSL
-    cipherLen =
-        rtc::openssl::gmsslEncrypt((unsigned char*)buffer, length, ptrKey,
-                                   ptrIv, (unsigned char*)ciphertext);
-#endif
-    if (cipherLen <= 0) {
-      RTC_LOG(LS_ERROR) << "PhysicalSocket::SendTo encrypt failed! cipherLen = "
-                        << cipherLen;
-    }
-    size_t len = addr.ToSockAddrStorage(&saddr);
-    sent = DoSendTo(s_, static_cast<const char*>(ciphertext),
-                    static_cast<int>(cipherLen),
+  size_t len = addr.ToSockAddrStorage(&saddr);
+  int sent =
+      DoSendTo(s_, static_cast<const char*>(buffer), static_cast<int>(length),
 #if defined(WEBRTC_LINUX) && !defined(WEBRTC_ANDROID)
-                    // Suppress SIGPIPE. See above for explanation.
-                    MSG_NOSIGNAL,
+               // Suppress SIGPIPE. See above for explanation.
+               MSG_NOSIGNAL,
 #else
-                    0,
+               0,
 #endif
-                    reinterpret_cast<sockaddr*>(&saddr), static_cast<int>(len));
-    if (webrtc::field_trial::IsEnabled("WebRTC-Start-SM4")) {
-      if (ciphertext) {
-        free(ciphertext);
-      }
-    }
-    UpdateLastError();
-    MaybeRemapSendError();
-    // We have seen minidumps where this may be false.
-    RTC_DCHECK(sent <= static_cast<int>(cipherLen));
-    if ((sent > 0 && sent < static_cast<int>(cipherLen)) ||
-        (sent < 0 && IsBlockingError(GetError()))) {
-      EnableEvents(DE_WRITE);
-    }
-  } else {
-    size_t len = addr.ToSockAddrStorage(&saddr);
-    sent =
-        DoSendTo(s_, static_cast<const char*>(buffer), static_cast<int>(length),
-#if defined(WEBRTC_LINUX) && !defined(WEBRTC_ANDROID)
-                 // Suppress SIGPIPE. See above for explanation.
-                 MSG_NOSIGNAL,
-#else
-                 0,
-#endif
-                 reinterpret_cast<sockaddr*>(&saddr), static_cast<int>(len));
-    UpdateLastError();
-    MaybeRemapSendError();
-    // We have seen minidumps where this may be false.
-    RTC_DCHECK(sent <= static_cast<int>(length));
-    if ((sent > 0 && sent < static_cast<int>(length)) ||
-        (sent < 0 && IsBlockingError(GetError()))) {
-      EnableEvents(DE_WRITE);
-    }
+               reinterpret_cast<sockaddr*>(&saddr), static_cast<int>(len));
+  UpdateLastError();
+  MaybeRemapSendError();
+  // We have seen minidumps where this may be false.
+  RTC_DCHECK(sent <= static_cast<int>(length));
+  if ((sent > 0 && sent < static_cast<int>(length)) ||
+      (sent < 0 && IsBlockingError(GetError()))) {
+    EnableEvents(DE_WRITE);
   }
   return sent;
 }
@@ -532,34 +359,6 @@ int PhysicalSocket::SendTo(const void* buffer,
 int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
   int received =
       ::recv(s_, static_cast<char*>(buffer), static_cast<int>(length), 0);
-
-  if (received < 0) {
-    RTC_LOG(LS_INFO) << "PhysicalSocket::Recv error! received = " << received;
-    return -1;
-  }
-
-  // xtc add gmssl decrytpo
-  if (webrtc::field_trial::IsEnabled("WebRTC-Start-SM4")) {
-    unsigned char* plaintext = (unsigned char*)malloc(received);
-    memset(plaintext, 0, received);
-    int plainLen = 0;
-#ifndef OPENSSL_IS_BORINGSSL
-    plainLen = rtc::openssl::gmsslDecrypt((unsigned char*)buffer, received,
-                                          ptrKey, ptrIv, plaintext);
-#endif
-    if (plainLen <= 0) {
-      RTC_LOG(LS_INFO) << "PhysicalSocket::Recv decrytpo error! plainLen = "
-                       << plainLen;
-      return -1;
-    }
-    memset(buffer, 0, sizeof(buffer));
-    memcpy(buffer, plaintext, received);
-    received = plainLen;
-    if (plaintext) {
-      free(plaintext);
-    }
-  }
-
   if ((received == 0) && (length != 0)) {
     // Note: on graceful shutdown, recv can return 0.  In this case, we
     // pretend it is blocking, and then signal close, so that simplifying
@@ -571,7 +370,6 @@ int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
     SetError(EWOULDBLOCK);
     return SOCKET_ERROR;
   }
-
   if (timestamp) {
     *timestamp = GetSocketRecvTimestamp(s_);
   }
@@ -586,6 +384,7 @@ int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
   }
   return received;
 }
+
 int PhysicalSocket::RecvFrom(void* buffer,
                              size_t length,
                              SocketAddress* out_addr,
@@ -595,35 +394,6 @@ int PhysicalSocket::RecvFrom(void* buffer,
   sockaddr* addr = reinterpret_cast<sockaddr*>(&addr_storage);
   int received = ::recvfrom(s_, static_cast<char*>(buffer),
                             static_cast<int>(length), 0, addr, &addr_len);
-
-  if (received < 0) {
-    RTC_LOG(LS_INFO) << "PhysicalSocket::RecvFrom error! received = "
-                     << received;
-    return -1;
-  }
-
-  // xtc add gmssl decrytpo
-  if (webrtc::field_trial::IsEnabled("WebRTC-Start-SM4")) {
-    unsigned char* plaintext = (unsigned char*)malloc(received);
-    memset(plaintext, 0, received);
-    int plainLen = 0;
-#ifndef OPENSSL_IS_BORINGSSL
-    plainLen = rtc::openssl::gmsslDecrypt((unsigned char*)buffer, received,
-                                          ptrKey, ptrIv, plaintext);
-#endif
-    if (plainLen <= 0) {
-      RTC_LOG(LS_INFO) << "PhysicalSocket::RecvFrom decrypto error! plainLen = "
-                       << plainLen;
-      return -1;
-    }
-    memset(buffer, 0, sizeof(buffer));
-    memcpy(buffer, plaintext, received);
-    received = plainLen;
-    if (plaintext) {
-      free(plaintext);
-    }
-  }
-
   if (timestamp) {
     *timestamp = GetSocketRecvTimestamp(s_);
   }
@@ -693,11 +463,7 @@ SOCKET PhysicalSocket::DoAccept(SOCKET socket,
 }
 
 int PhysicalSocket::DoSend(SOCKET socket, const char* buf, int len, int flags) {
-  int code = ::send(socket, buf, len, flags);
-  // RTC_LOG(LS_INFO) << "[vrv_wy] PhysicalSocket::DoSend flags=" << flags
-  //                  << ",code=" << code;
-  return code;
-  // return ::send(socket, buf, len, flags);
+  return ::send(socket, buf, len, flags);
 }
 
 int PhysicalSocket::DoSendTo(SOCKET socket,
@@ -706,12 +472,7 @@ int PhysicalSocket::DoSendTo(SOCKET socket,
                              int flags,
                              const struct sockaddr* dest_addr,
                              socklen_t addrlen) {
-  int code = ::sendto(socket, buf, len, flags, dest_addr, addrlen);
-  // RTC_LOG(LS_INFO) << "[vrv_wy] PhysicalSocket::DoSendTo flags=" << flags
-  // <<
-  // ",code=" << code;
-  return code;
-  // return ::sendto(socket, buf, len, flags, dest_addr, addrlen);
+  return ::sendto(socket, buf, len, flags, dest_addr, addrlen);
 }
 
 void PhysicalSocket::OnResolveResult(AsyncResolverInterface* resolver) {
@@ -789,9 +550,8 @@ int PhysicalSocket::TranslateOption(Option opt, int* slevel, int* sopt) {
       *sopt = TCP_NODELAY;
       break;
     case OPT_DSCP:
-      //RTC_LOG(LS_WARNING) << "Socket::OPT_DSCP not supported.";
-      //return -1;
-	    break;
+      RTC_LOG(LS_WARNING) << "Socket::OPT_DSCP not supported.";
+      return -1;
     case OPT_RTP_SENDTIME_EXTN_ID:
       return -1;  // No logging is necessary as this not a OS socket option.
     default:
@@ -1201,8 +961,8 @@ class PosixSignalHandler {
 
   // This is called directly from our real signal handler, so it must be
   // signal-handler-safe. That means it cannot assume anything about the
-  // user-level state of the process, since the handler could be executed at
-  // any time on any thread.
+  // user-level state of the process, since the handler could be executed at any
+  // time on any thread.
   void OnPosixSignalReceived(int signum) {
     if (signum >= static_cast<int>(arraysize(received_signal_))) {
       // We don't have space in our array for this.
@@ -1246,10 +1006,10 @@ class PosixSignalHandler {
     // could erroneously write a zero byte to an unrelated file handle in
     // OnPosixSignalReceived() if some other file happens to be opened later
     // during shutdown and happens to be given the same file descriptor number
-    // as our pipe had. Unfortunately even with this precaution there is still
-    // a race where that could occur if said signal happens to be handled
-    // concurrently with this code and happens to have already read the value
-    // of afd_[1] from memory before we clobber it, but that's unlikely.
+    // as our pipe had. Unfortunately even with this precaution there is still a
+    // race where that could occur if said signal happens to be handled
+    // concurrently with this code and happens to have already read the value of
+    // afd_[1] from memory before we clobber it, but that's unlikely.
     afd_[0] = -1;
     afd_[1] = -1;
     close(fd1);
@@ -1262,11 +1022,11 @@ class PosixSignalHandler {
   // benign. The signal handler sets the flag before signaling the pipe, so
   // we'll never end up blocking in select() while a flag is still true.
   // However, if two of the same signal arrive close to each other then it's
-  // possible that the second time the handler may set the flag while it's
-  // still true, meaning that signal will be missed. But the first occurrence
-  // of it will still be handled, so this isn't a problem. Volatile is not
-  // necessary here for correctness, but this data _is_ volatile so I've
-  // marked it as such.
+  // possible that the second time the handler may set the flag while it's still
+  // true, meaning that signal will be missed. But the first occurrence of it
+  // will still be handled, so this isn't a problem.
+  // Volatile is not necessary here for correctness, but this data _is_ volatile
+  // so I've marked it as such.
   volatile uint8_t received_signal_[kNumPosixSignals];
 };
 
@@ -1281,8 +1041,8 @@ class PosixSignalDispatcher : public Dispatcher {
   uint32_t GetRequestedEvents() override { return DE_READ; }
 
   void OnPreEvent(uint32_t ff) override {
-    // Events might get grouped if signals come very fast, so we read out up
-    // to 16 bytes to make sure we keep the pipe empty.
+    // Events might get grouped if signals come very fast, so we read out up to
+    // 16 bytes to make sure we keep the pipe empty.
     uint8_t b[16];
     ssize_t ret = read(GetDescriptor(), b, sizeof(b));
     if (ret < 0) {
@@ -1415,7 +1175,6 @@ PhysicalSocketServer::PhysicalSocketServer() : fWait_(false) {
     RTC_LOG_E(LS_WARNING, EN, errno) << "epoll_create";
     epoll_fd_ = INVALID_SOCKET;
   }
-  // RTC_LOG(LS_INFO) << "[vrv_wy] epoll_fd_ create=" << epoll_fd_;
 #endif
   signal_wakeup_ = new Signaler(this, &fWait_);
 #if defined(WEBRTC_WIN)
@@ -1433,7 +1192,6 @@ PhysicalSocketServer::~PhysicalSocketServer() {
   delete signal_wakeup_;
 #if defined(WEBRTC_USE_EPOLL)
   if (epoll_fd_ != INVALID_SOCKET) {
-    // RTC_LOG(LS_INFO) << "[vrv_wy] epoll_fd_ close=" << epoll_fd_;
     close(epoll_fd_);
   }
 #endif
@@ -1558,8 +1316,8 @@ void PhysicalSocketServer::AddRemovePendingDispatchers() {
 bool PhysicalSocketServer::Wait(int cmsWait, bool process_io) {
 #if defined(WEBRTC_USE_EPOLL)
   // We don't keep a dedicated "epoll" descriptor containing only the non-IO
-  // (i.e. signaling) dispatcher, so "poll" will be used instead of the
-  // default "select" to support sockets larger than FD_SETSIZE.
+  // (i.e. signaling) dispatcher, so "poll" will be used instead of the default
+  // "select" to support sockets larger than FD_SETSIZE.
   if (!process_io) {
     return WaitPoll(cmsWait, signal_wakeup_);
   } else if (epoll_fd_ != INVALID_SOCKET) {
@@ -1689,10 +1447,10 @@ bool PhysicalSocketServer::WaitSelect(int cmsWait, bool process_io) {
         RTC_LOG_E(LS_ERROR, EN, errno) << "select";
         return false;
       }
-      // Else ignore the error and keep going. If this EINTR was for one of
-      // the signals managed by this PhysicalSocketServer, the
-      // PosixSignalDeliveryDispatcher will be in the signaled state in the
-      // next iteration.
+      // Else ignore the error and keep going. If this EINTR was for one of the
+      // signals managed by this PhysicalSocketServer, the
+      // PosixSignalDeliveryDispatcher will be in the signaled state in the next
+      // iteration.
     } else if (n == 0) {
       // If timeout, return success
       return true;
@@ -1833,10 +1591,10 @@ bool PhysicalSocketServer::WaitEpoll(int cmsWait) {
         RTC_LOG_E(LS_ERROR, EN, errno) << "epoll";
         return false;
       }
-      // Else ignore the error and keep going. If this EINTR was for one of
-      // the signals managed by this PhysicalSocketServer, the
-      // PosixSignalDeliveryDispatcher will be in the signaled state in the
-      // next iteration.
+      // Else ignore the error and keep going. If this EINTR was for one of the
+      // signals managed by this PhysicalSocketServer, the
+      // PosixSignalDeliveryDispatcher will be in the signaled state in the next
+      // iteration.
     } else if (n == 0) {
       // If timeout, return success
       return true;
@@ -1861,8 +1619,8 @@ bool PhysicalSocketServer::WaitEpoll(int cmsWait) {
 
     if (static_cast<size_t>(n) == epoll_events_.size() &&
         epoll_events_.size() < kMaxEpollEvents) {
-      // We used the complete space to receive events, increase size for
-      // future iterations.
+      // We used the complete space to receive events, increase size for future
+      // iterations.
       epoll_events_.resize(std::max(epoll_events_.size() * 2, kMaxEpollEvents));
     }
 
@@ -1914,10 +1672,10 @@ bool PhysicalSocketServer::WaitPoll(int cmsWait, Dispatcher* dispatcher) {
         RTC_LOG_E(LS_ERROR, EN, errno) << "poll";
         return false;
       }
-      // Else ignore the error and keep going. If this EINTR was for one of
-      // the signals managed by this PhysicalSocketServer, the
-      // PosixSignalDeliveryDispatcher will be in the signaled state in the
-      // next iteration.
+      // Else ignore the error and keep going. If this EINTR was for one of the
+      // signals managed by this PhysicalSocketServer, the
+      // PosixSignalDeliveryDispatcher will be in the signaled state in the next
+      // iteration.
     } else if (n == 0) {
       // If timeout, return success
       return true;
@@ -1990,9 +1748,9 @@ bool PhysicalSocketServer::InstallSignal(int signum, void (*handler)(int)) {
   }
   act.sa_handler = handler;
 #if !defined(__native_client__)
-  // Use SA_RESTART so that our syscalls don't get EINTR, since we don't need
-  // it and it's a nuisance. Though some syscalls still return EINTR and
-  // there's no real standard for which ones. :(
+  // Use SA_RESTART so that our syscalls don't get EINTR, since we don't need it
+  // and it's a nuisance. Though some syscalls still return EINTR and there's no
+  // real standard for which ones. :(
   act.sa_flags = SA_RESTART;
 #else
   act.sa_flags = 0;

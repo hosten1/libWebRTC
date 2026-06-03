@@ -77,6 +77,12 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
         ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker.cc
         ${WEBRTC_SRC_DIR}/rtc_base/synchronization/sequence_checker_internal.cc
         ${WEBRTC_SRC_DIR}/rtc_base/synchronization/mutex.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/null_socket_server.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/internal/default_socket_server.cc
+        # ${WEBRTC_SRC_DIR}/rtc_base/network_constants.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/network_monitor.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/network_monitor_factory.cc
+        ${WEBRTC_SRC_DIR}/rtc_base/physical_socket_server.cc
     )
 
     # 这个原来是在webrtc的rtc_base/build.gn里的rtc_base_test_utils中使用，只有这个使用了cpu_time.cc,也只有wind和mac Linux、FUCHSIA支持 

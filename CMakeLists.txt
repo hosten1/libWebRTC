@@ -150,12 +150,19 @@ install(DIRECTORY ${WEBRTC_SRC_DIR}/call/
         FILES_MATCHING PATTERN "*.h")
 
 # ==================== 测试程序 ====================
-add_executable(test_real_rtp_packet test_real_rtp_packet.cc)
+add_executable(test_real_rtp_packet test/test_real_rtp_packet.cc)
 target_link_libraries(test_real_rtp_packet PRIVATE
+    libwebrtc
+    abseil
+)
+
+add_executable(test_webrtc_threading test/test_webrtc_threading.cc)
+target_link_libraries(test_webrtc_threading PRIVATE
     libwebrtc
     abseil
 )
 
 if(WIN32)
     target_link_libraries(test_real_rtp_packet PRIVATE ws2_32 winmm)
+    target_link_libraries(test_webrtc_threading PRIVATE ws2_32 winmm)
 endif()

@@ -24,7 +24,17 @@ std::vector<uint8_t> ReadFile(const std::string& path) {
 }
 
 int main() {
-    std::vector<uint8_t> raw_packet = ReadFile("test/ulpfec_rtp_packet.rtp");
+    // 从 test/ 目录或项目根目录运行
+    std::vector<uint8_t> raw_packet = ReadFile("ulpfec_rtp_packet.rtp");
+    if (raw_packet.empty()) {
+        raw_packet = ReadFile("test/ulpfec_rtp_packet.rtp");
+    }
+    if (raw_packet.empty()) {
+        raw_packet = ReadFile("../test/ulpfec_rtp_packet.rtp");
+    }
+      if (raw_packet.empty()) {
+        raw_packet = ReadFile("../../test/ulpfec_rtp_packet.rtp");
+    }
     if (raw_packet.empty()) {
         return 1;
     }
