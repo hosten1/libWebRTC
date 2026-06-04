@@ -107,6 +107,16 @@ else()
     message(STATUS "[libwebrtc] GCC modules disabled")
 endif()
 
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    message(STATUS "[libwebrtc] Adding STUN modules...")
+    list(APPEND WEBRTC_API_SOURCES
+       ${WEBRTC_SRC_DIR}/api/transport/stun.cc
+    )
+else()
+    message(STATUS "[libwebrtc] STUN modules disabled")
+endif()
+
+
 
 # add_library(api STATIC ${WEBRTC_API_SOURCES})
 add_library(api OBJECT

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.10)
 project(libwebrtc LANGUAGES C CXX)
 message(STATUS "Building for ${CMAKE_SYSTEM_NAME}")
 set(CMAKE_CXX_STANDARD 14)
@@ -50,6 +50,89 @@ add_subdirectory(${WEBRTC_SRC_DIR}/modules)
 # 第三方依赖
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
 
+# OpenSSL 预编译静态库
+# 克隆命令: git clone --branch openssl-3.3.1 https://gitee.com/mirrors/openssl.git deps/openssl
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    set(OPENSSL_SOURCE_DIR ${DEPS_DIR}/openssl)
+    set(OPENSSL_INSTALL_DIR ${PROJECT_BINARY_DIR}/openssl-install)
+    file(MAKE_DIRECTORY ${OPENSSL_INSTALL_DIR}/include)
+    file(MAKE_DIRECTORY ${OPENSSL_INSTALL_DIR}/lib)
+
+    if(EXISTS ${OPENSSL_SOURCE_DIR}/Configure)
+        include(ExternalProject)
+
+        if(WIN32 AND NOT ANDROID)
+            if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+                set(OPENSSL_CONFIG_CMD "VC-WIN64A")
+            else()
+                set(OPENSSL_CONFIG_CMD "VC-WIN32")
+            endif()
+            set(OPENSSL_BUILD_CMD "nmake")
+            set(OPENSSL_INSTALL_CMD "nmake install_sw")
+            set(OPENSSL_SSL_LIB "${OPENSSL_INSTALL_DIR}/lib/libssl.lib")
+            set(OPENSSL_CRYPTO_LIB "${OPENSSL_INSTALL_DIR}/lib/libcrypto.lib")
+            # Windows 使用 chdir 切换目录
+            set(CONFIGURE_CMD 
+                ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR} 
+                perl Configure ${OPENSSL_CONFIG_CMD}
+                    --prefix=${OPENSSL_INSTALL_DIR}
+                    --openssldir=${OPENSSL_INSTALL_DIR}
+                    no-shared no-tests
+            )
+        else()
+            # Unix-like 系统...
+            if(APPLE)
+                if(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneOS.*" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+                    set(OPENSSL_CONFIG_CMD "ios64-cross")
+                else()
+                    set(OPENSSL_CONFIG_CMD "darwin64-x86_64-cc")
+                endif()
+            elseif(ANDROID)
+                # ... 省略，可保留原逻辑
+            else()
+                set(OPENSSL_CONFIG_CMD "linux-x86_64")
+            endif()
+            set(OPENSSL_BUILD_CMD "make")
+            set(OPENSSL_INSTALL_CMD "make install_sw")
+            set(OPENSSL_SSL_LIB "${OPENSSL_INSTALL_DIR}/lib/libssl.a")
+            set(OPENSSL_CRYPTO_LIB "${OPENSSL_INSTALL_DIR}/lib/libcrypto.a")
+            set(CONFIGURE_CMD 
+                ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR}
+                ./Configure ${OPENSSL_CONFIG_CMD}
+                    --prefix=${OPENSSL_INSTALL_DIR}
+                    --openssldir=${OPENSSL_INSTALL_DIR}
+                    no-shared no-tests
+            )
+        endif()
+
+        ExternalProject_Add(openssl_external
+            SOURCE_DIR ${OPENSSL_SOURCE_DIR}
+            CONFIGURE_COMMAND ${CONFIGURE_CMD}
+            BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR} ${OPENSSL_BUILD_CMD}
+            INSTALL_COMMAND ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR} ${OPENSSL_INSTALL_CMD}
+            TEST_COMMAND ""
+            BUILD_BYPRODUCTS ${OPENSSL_SSL_LIB} ${OPENSSL_CRYPTO_LIB}
+        )
+
+        add_library(OpenSSL::SSL STATIC IMPORTED GLOBAL)
+        add_library(OpenSSL::Crypto STATIC IMPORTED GLOBAL)
+        set_target_properties(OpenSSL::SSL PROPERTIES
+            IMPORTED_LOCATION ${OPENSSL_SSL_LIB}
+            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INSTALL_DIR}/include
+        )
+        set_target_properties(OpenSSL::Crypto PROPERTIES
+            IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIB}
+            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INSTALL_DIR}/include
+        )
+        add_dependencies(OpenSSL::SSL openssl_external)
+        add_dependencies(OpenSSL::Crypto openssl_external)
+
+        message(STATUS "OpenSSL will be built as static library (${OPENSSL_SSL_LIB})")
+    else()
+        message(FATAL_ERROR "OpenSSL source not found at ${OPENSSL_SOURCE_DIR}")
+    endif()
+endif()
+
 # ==================== 创建 libwebrtc 主库 ====================
 add_library(libwebrtc STATIC
     $<TARGET_OBJECTS:rtc_base>
@@ -67,11 +150,12 @@ target_include_directories(libwebrtc PUBLIC
 
 target_link_libraries(libwebrtc PUBLIC
     abseil
-    spl_sqrt_floor
 )
 
 if(MSVC)
-    target_compile_options(libwebrtc PUBLIC /W0 /utf-8)
+    target_compile_options(libwebrtc PRIVATE  
+    $<$<COMPILE_LANGUAGE:CXX>:/W0>  
+    $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
 else()
     target_compile_options(libwebrtc PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:-include;cstdint>
@@ -79,6 +163,72 @@ else()
 endif()
 
 set_target_properties(libwebrtc PROPERTIES OUTPUT_NAME webrtc)
+
+
+function(merge_static_libraries OUTPUT_LIB)
+
+    if(MSVC)
+
+        add_custom_command(
+            OUTPUT ${OUTPUT_LIB}
+            COMMAND lib.exe /OUT:${OUTPUT_LIB} ${ARGN}
+            DEPENDS ${ARGN}
+        )
+
+    elseif(APPLE)
+
+        add_custom_command(
+            OUTPUT ${OUTPUT_LIB}
+            COMMAND libtool -static -o ${OUTPUT_LIB} ${ARGN}
+            DEPENDS ${ARGN}
+        )
+
+    else()
+
+        set(MRI_FILE ${CMAKE_CURRENT_BINARY_DIR}/merge.mri)
+
+        file(WRITE ${MRI_FILE}
+            "CREATE ${OUTPUT_LIB}\n"
+        )
+
+        foreach(LIB ${ARGN})
+            file(APPEND ${MRI_FILE}
+                "ADDLIB ${LIB}\n"
+            )
+        endforeach()
+
+        file(APPEND ${MRI_FILE}
+            "SAVE\nEND\n"
+        )
+
+        add_custom_command(
+            OUTPUT ${OUTPUT_LIB}
+            COMMAND ${CMAKE_AR} -M < ${MRI_FILE}
+            DEPENDS ${ARGN}
+        )
+
+    endif()
+
+endfunction()
+
+
+if(WEBRTC_BUILD_WEBRTC_STUN)
+ merge_static_libraries(
+        ${CMAKE_BINARY_DIR}/webrtc_full.lib
+        $<TARGET_FILE:webrtc>
+        $<TARGET_FILE:abseil>
+        $<TARGET_FILE:crypto>
+        $<TARGET_FILE:ssl>
+ )                                                                                                                               
+else()
+ merge_static_libraries(
+        ${CMAKE_BINARY_DIR}/webrtc_full.lib
+        $<TARGET_FILE:webrtc>
+        $<TARGET_FILE:abseil>
+ )
+endif()
+
+
 
 # ==================== 安装 ====================
 install(TARGETS libwebrtc

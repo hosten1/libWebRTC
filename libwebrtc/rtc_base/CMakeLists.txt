@@ -149,7 +149,8 @@ if(WEBRTC_BUILD_WEBRTC_STUN)
     list(APPEND WEBRTC_BASE_SOURCES
          ${WEBRTC_SRC_DIR}/rtc_base/memory_stream.cc
          ${WEBRTC_SRC_DIR}/rtc_base/memory_usage.cc
-        #  ${WEBRTC_SRC_DIR}/rtc_base/message_digest.cc
+         ${WEBRTC_SRC_DIR}/rtc_base/message_digest.cc
+         ${WEBRTC_SRC_DIR}/rtc_base/openssl_digest.cc
         )
         if(ANDROID)
             list(APPEND WEBRTC_BASE_SOURCES
@@ -191,3 +192,13 @@ target_include_directories(
         ${DEPS_DIR}/abseil-cpp/abseil-cpp
 
 )
+
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    # 使用 OpenSSL（替换 BoringSSL）
+    add_dependencies(rtc_base openssl_external)
+    target_link_libraries(rtc_base PRIVATE 
+        OpenSSL::SSL
+        OpenSSL::Crypto
+    )
+    message(STATUS "[libwebrtc] rtc_base linked with OpenSSL")
+endif()
