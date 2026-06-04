@@ -148,7 +148,6 @@ if(WEBRTC_BUILD_WEBRTC_STUN)
     message(STATUS "[libwebrtc] Adding WebRTC STUN modules...")
     list(APPEND WEBRTC_BASE_SOURCES
          ${WEBRTC_SRC_DIR}/rtc_base/memory_stream.cc
-         ${WEBRTC_SRC_DIR}/rtc_base/memory_usage.cc
          ${WEBRTC_SRC_DIR}/rtc_base/message_digest.cc
          ${WEBRTC_SRC_DIR}/rtc_base/openssl_digest.cc
         )
