@@ -103,10 +103,9 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
             list(APPEND WEBRTC_BASE_SOURCES
                 ${WEBRTC_SRC_DIR}/rtc_base/task_queue_gcd.cc
             )
-    elseif(LINUX AND UNIX)
+    elseif(ANDROID)
         list(APPEND WEBRTC_BASE_SOURCES
                 ${WEBRTC_SRC_DIR}/rtc_base/task_queue_stdlib.cc
-                ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_android.cc
             )
     elseif(LINUX AND UNIX)
             list(APPEND WEBRTC_BASE_SOURCES
@@ -132,10 +131,42 @@ if(WEBRTC_BUILD_WEBRTC_LOGGING)
         ${WEBRTC_SRC_DIR}/rtc_base/stream.cc
         ${WEBRTC_SRC_DIR}/rtc_base/file_rotating_stream.cc
         )
+        
+    # macOS 系统需要编译 logging_mac.mm（Objective-C++）
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        list(APPEND WEBRTC_BASE_SOURCES
+            ${WEBRTC_SRC_DIR}/rtc_base/logging_mac.mm
+        )
+    endif()
+     
     message(STATUS "[libwebrtc] WebRTC logging modules added")
 else()
     message(STATUS "[libwebrtc] WebRTC logging modules disabled")
-endif()
+endif(WEBRTC_BUILD_WEBRTC_LOGGING)
+
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    message(STATUS "[libwebrtc] Adding WebRTC STUN modules...")
+    list(APPEND WEBRTC_BASE_SOURCES
+         ${WEBRTC_SRC_DIR}/rtc_base/memory_stream.cc
+         ${WEBRTC_SRC_DIR}/rtc_base/memory_usage.cc
+        #  ${WEBRTC_SRC_DIR}/rtc_base/message_digest.cc
+        )
+        if(ANDROID)
+            list(APPEND WEBRTC_BASE_SOURCES
+                    ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_android.cc
+                )
+        endif()
+        if(APPLE)
+            list(APPEND WEBRTC_BASE_SOURCES
+                    ${WEBRTC_SRC_DIR}/rtc_base/mac_ifaddrs_converter.cc
+                )
+        elseif(UNIX OR LINUX)
+            list(APPEND WEBRTC_BASE_SOURCES
+                    ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_converter.cc
+                )
+        endif()
+endif(WEBRTC_BUILD_WEBRTC_STUN)
+
 
 add_subdirectory(
     ${WEBRTC_SRC_DIR}/rtc_base/third_party/base64

@@ -21,6 +21,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 # 预编译选项 - 按功能控制模块编译
 option(WEBRTC_BUILD_WEBRTC_THREAD "Build WebRTC threading modules" ON)
 option(WEBRTC_BUILD_WEBRTC_STUN "Build WebRTC STUN related modules" ON)
+option(WEBRTC_BUILD_WEBRTC_AUDIO_TOOL "Build WebRTC audio tool modules" ON)
 option(WEBRTC_BUILD_RED "Build RED (RTP redundancy) modules" ON)
 option(WEBRTC_BUILD_FEC "Build FEC (Forward Error Correction) modules" ON)
 option(WEBRTC_BUILD_VIDEO "Build video-related modules" ON)

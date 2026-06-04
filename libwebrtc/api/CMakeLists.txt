@@ -64,15 +64,15 @@ else()
 endif()
 
 
-# webrtc stun modules end
-if(WEBRTC_BUILD_WEBRTC_STUN)
-    message(STATUS "[libwebrtc] Adding STUN modules...")
+# webrtc audio tool modules end
+if(WEBRTC_BUILD_WEBRTC_AUDIO_TOOL)
+    message(STATUS "[libwebrtc] Adding audio tool modules...")
     list(APPEND WEBRTC_API_SOURCES
         ${WEBRTC_SRC_DIR}/api/audio/audio_frame.cc
         ${WEBRTC_SRC_DIR}/api/audio/channel_layout.cc
     )
 else()
-    message(STATUS "[libwebrtc api] STUN modules disabled")
+    message(STATUS "[libwebrtc api] Audio tool modules disabled")
 endif()
 
 # video modules
