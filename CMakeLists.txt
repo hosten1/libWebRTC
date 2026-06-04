@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(libwebrtc LANGUAGES C CXX)
 message(STATUS "Building for ${CMAKE_SYSTEM_NAME}")
 set(CMAKE_CXX_STANDARD 14)
@@ -39,6 +39,115 @@ if(WEBRTC_BUILD_COMMON_VIDEO AND NOT WEBRTC_BUILD_VIDEO)
     message(WARNING "[libwebrtc] WEBRTC_BUILD_COMMON_VIDEO enabled but WEBRTC_BUILD_VIDEO disabled. Common video modules may not be used.")
 endif()
 
+# ==================== OpenSSL 依赖管理 ====================
+# 支持多种使用方式：
+# 1. 使用 deps/openssl（推荐）：自动检测预编译库
+# 2. 使用 deps/openssl-cmake：使用 add_subdirectory 编译
+# 3. 使用系统 OpenSSL：设置 OPENSSL_ROOT_DIR
+#
+# 用户可配置选项：
+# - OPENSSL_ROOT_DIR: OpenSSL 根目录（默认：${DEPS_DIR}/openssl）
+# - OPENSSL_USE_BUNDLED: 是否使用 bundled 版本（默认：ON）
+
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    if(NOT DEFINED OPENSSL_ROOT_DIR)
+        set(OPENSSL_ROOT_DIR "${DEPS_DIR}/openssl" CACHE PATH "OpenSSL root directory")
+    endif()
+    
+    if(NOT DEFINED OPENSSL_USE_BUNDLED)
+        set(OPENSSL_USE_BUNDLED ON CACHE BOOL "Use bundled OpenSSL")
+    endif()
+    
+    # 根据平台确定库目录
+    if(WIN32)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OPENSSL_PLATFORM_DIR "win64")
+        else()
+            set(OPENSSL_PLATFORM_DIR "win32")
+        endif()
+    elseif(ANDROID)
+        if(ANDROID_ABI STREQUAL "armeabi-v7a")
+            set(OPENSSL_PLATFORM_DIR "android-arm")
+        elseif(ANDROID_ABI STREQUAL "arm64-v8a")
+            set(OPENSSL_PLATFORM_DIR "android-arm64")
+        elseif(ANDROID_ABI STREQUAL "x86")
+            set(OPENSSL_PLATFORM_DIR "android-x86")
+        elseif(ANDROID_ABI STREQUAL "x86_64")
+            set(OPENSSL_PLATFORM_DIR "android-x86_64")
+        else()
+            set(OPENSSL_PLATFORM_DIR "android-${ANDROID_ABI}")
+        endif()
+    elseif(APPLE)
+        if(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneOS.*" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+            set(OPENSSL_PLATFORM_DIR "ios-device")
+        elseif(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneSimulator.*")
+            set(OPENSSL_PLATFORM_DIR "ios-simulator")
+        else()
+            set(OPENSSL_PLATFORM_DIR "macos")
+        endif()
+    else()
+        set(OPENSSL_PLATFORM_DIR "linux-x86_64")
+    endif()
+    
+    # 设置库路径
+    if(WIN32)
+        set(OPENSSL_SSL_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libssl.lib")
+        set(OPENSSL_CRYPTO_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libcrypto.lib")
+    else()
+        set(OPENSSL_SSL_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libssl.a")
+        set(OPENSSL_CRYPTO_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libcrypto.a")
+    endif()
+    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+    
+    # 检查预编译库是否存在
+    set(OPENSSL_PREBUILT_FOUND FALSE)
+    if(EXISTS ${OPENSSL_SSL_LIB} AND EXISTS ${OPENSSL_CRYPTO_LIB} AND EXISTS ${OPENSSL_INCLUDE_DIR})
+        set(OPENSSL_PREBUILT_FOUND TRUE)
+        message(STATUS "[libwebrtc] Found pre-built OpenSSL for ${OPENSSL_PLATFORM_DIR}")
+    endif()
+    
+    if(OPENSSL_PREBUILT_FOUND)
+        # 创建导入库目标（预编译库）
+        add_library(OpenSSL::SSL STATIC IMPORTED GLOBAL)
+        add_library(OpenSSL::Crypto STATIC IMPORTED GLOBAL)
+        
+        set_target_properties(OpenSSL::SSL PROPERTIES
+            IMPORTED_LOCATION ${OPENSSL_SSL_LIB}
+            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
+        )
+        set_target_properties(OpenSSL::Crypto PROPERTIES
+            IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIB}
+            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
+        )
+        
+    elseif(OPENSSL_USE_BUNDLED)
+        # 使用 add_subdirectory 编译 deps/openssl-cmake
+        set(OPENSSL_CMAKE_DIR "${DEPS_DIR}/openssl-cmake/openssl-cmake-1.1.1w-20250419")
+        
+        if(EXISTS ${OPENSSL_CMAKE_DIR}/CMakeLists.txt)
+            message(STATUS "[libwebrtc] Building OpenSSL from source using add_subdirectory")
+            
+            set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "Build static OpenSSL libraries")
+            set(WITH_APPS OFF CACHE BOOL "Don't build OpenSSL applications")
+            set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries only")
+            
+            add_subdirectory(${OPENSSL_CMAKE_DIR} ${PROJECT_BINARY_DIR}/openssl)
+            
+            if(TARGET ssl AND TARGET crypto)
+                add_library(OpenSSL::SSL ALIAS ssl)
+                add_library(OpenSSL::Crypto ALIAS crypto)
+            else()
+                message(FATAL_ERROR "[libwebrtc] OpenSSL targets not found")
+            endif()
+        else()
+            message(FATAL_ERROR "[libwebrtc] OpenSSL CMake source not found at ${OPENSSL_CMAKE_DIR}")
+        endif()
+    endif()
+endif()
+
+# ==================== 第三方依赖 ====================
+add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
+
 # ==================== 子模块 ====================
 # 引入各子模块（均创建为 OBJECT 库，遵循 rtc_base 模式）
 add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base)
@@ -46,92 +155,6 @@ add_subdirectory(${WEBRTC_SRC_DIR}/api)
 add_subdirectory(${WEBRTC_SRC_DIR}/system_wrappers)
 add_subdirectory(${WEBRTC_SRC_DIR}/common_audio)
 add_subdirectory(${WEBRTC_SRC_DIR}/modules)
-
-# 第三方依赖
-add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
-
-# OpenSSL 预编译静态库
-# 克隆命令: git clone --branch openssl-3.3.1 https://gitee.com/mirrors/openssl.git deps/openssl
-if(WEBRTC_BUILD_WEBRTC_STUN)
-    set(OPENSSL_SOURCE_DIR ${DEPS_DIR}/openssl)
-    set(OPENSSL_INSTALL_DIR ${PROJECT_BINARY_DIR}/openssl-install)
-    file(MAKE_DIRECTORY ${OPENSSL_INSTALL_DIR}/include)
-    file(MAKE_DIRECTORY ${OPENSSL_INSTALL_DIR}/lib)
-
-    if(EXISTS ${OPENSSL_SOURCE_DIR}/Configure)
-        include(ExternalProject)
-
-        if(WIN32 AND NOT ANDROID)
-            if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-                set(OPENSSL_CONFIG_CMD "VC-WIN64A")
-            else()
-                set(OPENSSL_CONFIG_CMD "VC-WIN32")
-            endif()
-            set(OPENSSL_BUILD_CMD "nmake")
-            set(OPENSSL_INSTALL_CMD "nmake install_sw")
-            set(OPENSSL_SSL_LIB "${OPENSSL_INSTALL_DIR}/lib/libssl.lib")
-            set(OPENSSL_CRYPTO_LIB "${OPENSSL_INSTALL_DIR}/lib/libcrypto.lib")
-            # Windows 使用 chdir 切换目录
-            set(CONFIGURE_CMD 
-                ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR} 
-                perl Configure ${OPENSSL_CONFIG_CMD}
-                    --prefix=${OPENSSL_INSTALL_DIR}
-                    --openssldir=${OPENSSL_INSTALL_DIR}
-                    no-shared no-tests
-            )
-        else()
-            # Unix-like 系统...
-            if(APPLE)
-                if(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneOS.*" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
-                    set(OPENSSL_CONFIG_CMD "ios64-cross")
-                else()
-                    set(OPENSSL_CONFIG_CMD "darwin64-x86_64-cc")
-                endif()
-            elseif(ANDROID)
-                # ... 省略，可保留原逻辑
-            else()
-                set(OPENSSL_CONFIG_CMD "linux-x86_64")
-            endif()
-            set(OPENSSL_BUILD_CMD "make")
-            set(OPENSSL_INSTALL_CMD "make install_sw")
-            set(OPENSSL_SSL_LIB "${OPENSSL_INSTALL_DIR}/lib/libssl.a")
-            set(OPENSSL_CRYPTO_LIB "${OPENSSL_INSTALL_DIR}/lib/libcrypto.a")
-            set(CONFIGURE_CMD 
-                ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR}
-                ./Configure ${OPENSSL_CONFIG_CMD}
-                    --prefix=${OPENSSL_INSTALL_DIR}
-                    --openssldir=${OPENSSL_INSTALL_DIR}
-                    no-shared no-tests
-            )
-        endif()
-
-        ExternalProject_Add(openssl_external
-            SOURCE_DIR ${OPENSSL_SOURCE_DIR}
-            CONFIGURE_COMMAND ${CONFIGURE_CMD}
-            BUILD_COMMAND ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR} ${OPENSSL_BUILD_CMD}
-            INSTALL_COMMAND ${CMAKE_COMMAND} -E chdir ${OPENSSL_SOURCE_DIR} ${OPENSSL_INSTALL_CMD}
-            TEST_COMMAND ""
-            BUILD_BYPRODUCTS ${OPENSSL_SSL_LIB} ${OPENSSL_CRYPTO_LIB}
-        )
-
-        add_library(OpenSSL::SSL STATIC IMPORTED GLOBAL)
-        add_library(OpenSSL::Crypto STATIC IMPORTED GLOBAL)
-        set_target_properties(OpenSSL::SSL PROPERTIES
-            IMPORTED_LOCATION ${OPENSSL_SSL_LIB}
-            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INSTALL_DIR}/include
-        )
-        set_target_properties(OpenSSL::Crypto PROPERTIES
-            IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIB}
-            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INSTALL_DIR}/include
-        )
-        add_dependencies(OpenSSL::SSL openssl_external)
-        add_dependencies(OpenSSL::Crypto openssl_external)
-
-        message(STATUS "OpenSSL will be built as static library (${OPENSSL_SSL_LIB})")
-    else()
-        message(FATAL_ERROR "OpenSSL source not found at ${OPENSSL_SOURCE_DIR}")
-    endif()
-endif()
 
 # ==================== 创建 libwebrtc 主库 ====================
 add_library(libwebrtc STATIC
@@ -163,72 +186,6 @@ else()
 endif()
 
 set_target_properties(libwebrtc PROPERTIES OUTPUT_NAME webrtc)
-
-
-function(merge_static_libraries OUTPUT_LIB)
-
-    if(MSVC)
-
-        add_custom_command(
-            OUTPUT ${OUTPUT_LIB}
-            COMMAND lib.exe /OUT:${OUTPUT_LIB} ${ARGN}
-            DEPENDS ${ARGN}
-        )
-
-    elseif(APPLE)
-
-        add_custom_command(
-            OUTPUT ${OUTPUT_LIB}
-            COMMAND libtool -static -o ${OUTPUT_LIB} ${ARGN}
-            DEPENDS ${ARGN}
-        )
-
-    else()
-
-        set(MRI_FILE ${CMAKE_CURRENT_BINARY_DIR}/merge.mri)
-
-        file(WRITE ${MRI_FILE}
-            "CREATE ${OUTPUT_LIB}\n"
-        )
-
-        foreach(LIB ${ARGN})
-            file(APPEND ${MRI_FILE}
-                "ADDLIB ${LIB}\n"
-            )
-        endforeach()
-
-        file(APPEND ${MRI_FILE}
-            "SAVE\nEND\n"
-        )
-
-        add_custom_command(
-            OUTPUT ${OUTPUT_LIB}
-            COMMAND ${CMAKE_AR} -M < ${MRI_FILE}
-            DEPENDS ${ARGN}
-        )
-
-    endif()
-
-endfunction()
-
-
-if(WEBRTC_BUILD_WEBRTC_STUN)
- merge_static_libraries(
-        ${CMAKE_BINARY_DIR}/webrtc_full.lib
-        $<TARGET_FILE:webrtc>
-        $<TARGET_FILE:abseil>
-        $<TARGET_FILE:crypto>
-        $<TARGET_FILE:ssl>
- )                                                                                                                               
-else()
- merge_static_libraries(
-        ${CMAKE_BINARY_DIR}/webrtc_full.lib
-        $<TARGET_FILE:webrtc>
-        $<TARGET_FILE:abseil>
- )
-endif()
-
-
 
 # ==================== 安装 ====================
 install(TARGETS libwebrtc

@@ -195,7 +195,6 @@ target_include_directories(
 
 if(WEBRTC_BUILD_WEBRTC_STUN)
     # 使用 OpenSSL（替换 BoringSSL）
-    add_dependencies(rtc_base openssl_external)
     target_link_libraries(rtc_base PRIVATE 
         OpenSSL::SSL
         OpenSSL::Crypto
