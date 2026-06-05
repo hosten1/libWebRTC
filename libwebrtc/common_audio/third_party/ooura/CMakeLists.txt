@@ -20,10 +20,6 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
         ${WEBRTC_SRC_DIR}/common_audio/third_party/ooura/fft_size_128/ooura_fft_tables_neon_sse2.h
     )
-    # POSIX (Linux, macOS, Android...) 或 Fuchsia 需要启用 SSE2 指令
-    if(UNIX OR CMAKE_SYSTEM_NAME STREQUAL "Fuchsia")
-        target_compile_options(ooura PRIVATE -msse2)
-    endif()
 endif()
 
 # 判断 MIPS 架构
@@ -53,5 +49,12 @@ target_compile_options(ooura PRIVATE
 
 # 设置 C++ 标准
 target_compile_features(ooura PRIVATE cxx_std_11)
+
+# POSIX x86/x64 (Linux, macOS, Android...) 或 Fuchsia 需要启用 SSE2 指令
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
+    if(UNIX OR CMAKE_SYSTEM_NAME STREQUAL "Fuchsia")
+        target_compile_options(ooura PRIVATE -msse2)
+    endif()
+endif()
 
 message(STATUS "[libwebrtc] Added ooura FFT library")
