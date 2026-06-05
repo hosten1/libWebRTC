@@ -66,6 +66,10 @@ typedef void* SockOptArg;
 
 #endif  // WEBRTC_POSIX
 
+#if defined(WEBRTC_LINUX)
+#include <linux/sockios.h>
+#endif
+
 #if defined(WEBRTC_POSIX) && !defined(WEBRTC_MAC) && !defined(__native_client__)
 
 int64_t GetSocketRecvTimestamp(int socket) {

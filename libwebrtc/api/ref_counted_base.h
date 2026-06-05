@@ -11,9 +11,9 @@
 #define API_REF_COUNTED_BASE_H_
 
 #if defined(WEBRTC_ANDROID)
-#include <type_traits>
-#endif
 
+#endif
+#include <type_traits>
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/ref_count.h"
 #include "rtc_base/ref_counter.h"
