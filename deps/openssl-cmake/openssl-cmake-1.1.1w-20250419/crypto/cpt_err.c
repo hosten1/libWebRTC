@@ -54,8 +54,10 @@ static const ERR_STRING_DATA CRYPTO_str_functs[] = {
 };
 
 static const ERR_STRING_DATA CRYPTO_str_reasons[] = {
+#ifndef OPENSSL_NO_FIPS
     {ERR_PACK(ERR_LIB_CRYPTO, 0, CRYPTO_R_FIPS_MODE_NOT_SUPPORTED),
     "fips mode not supported"},
+#endif
     {ERR_PACK(ERR_LIB_CRYPTO, 0, CRYPTO_R_ILLEGAL_HEX_DIGIT),
     "illegal hex digit"},
     {ERR_PACK(ERR_LIB_CRYPTO, 0, CRYPTO_R_ODD_NUMBER_OF_DIGITS),

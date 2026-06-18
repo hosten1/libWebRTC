@@ -102,6 +102,7 @@ if(WEBRTC_BUILD_WEBRTC_THREAD)
     elseif(APPLE)
             list(APPEND WEBRTC_BASE_SOURCES
                 ${WEBRTC_SRC_DIR}/rtc_base/task_queue_gcd.cc
+                ${WEBRTC_SRC_DIR}/rtc_base/system/cocoa_threading.mm
             )
     elseif(ANDROID)
         list(APPEND WEBRTC_BASE_SOURCES

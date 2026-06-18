@@ -26,6 +26,8 @@
 include( CMakeParseArguments )
 
 string(TIMESTAMP BUILDINF_DATE "%Y-%m-%d %H:%M:%S UTC" UTC)
+set(BUILDINF_PLATFORM "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+set(BUILDINF_COMPILER "${CMAKE_C_COMPILER}")
 configure_file( buildinf.h.cmake buildinf.h )
 
 include( CheckIncludeFile )
@@ -61,12 +63,21 @@ set( LIBSRC
   cpt_err.c cryptlib.c ctype.c cversion.c ebcdic.c ex_data.c init.c mem.c mem_clr.c mem_dbg.c mem_sec.c o_dir.c o_fips.c
   o_fopen.c o_init.c o_str.c o_time.c uid.c getenv.c )
 
-include_directories( BEFORE SYSTEM
-  modes ec/curve448 ec/curve448/arch_32
-  ${CMAKE_CURRENT_BINARY_DIR}/ # buildinf.h
-  ${PROJECT_BINARY_DIR}/include # public|crypto|internal
-  ${PROJECT_SOURCE_DIR}/ # e_os.h
-)
+if( APPLE )
+    include_directories( BEFORE
+        modes ec/curve448 ec/curve448/arch_32
+        ${CMAKE_CURRENT_BINARY_DIR}/ # buildinf.h
+        ${PROJECT_BINARY_DIR}/include # public|crypto|internal
+        ${PROJECT_SOURCE_DIR}/ # e_os.h
+    )
+else()
+    include_directories( BEFORE SYSTEM
+        modes ec/curve448 ec/curve448/arch_32
+        ${CMAKE_CURRENT_BINARY_DIR}/ # buildinf.h
+        ${PROJECT_BINARY_DIR}/include # public|crypto|internal
+        ${PROJECT_SOURCE_DIR}/ # e_os.h
+    )
+endif()
 
 if( BUILD_SHARED_LIBS )
   add_definitions( -DOPENSSL_BUILD_SHLIBCRYPTO )

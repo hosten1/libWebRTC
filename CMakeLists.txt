@@ -287,6 +287,12 @@ target_link_libraries(test_stun PRIVATE
 )
 if(WIN32)
     target_link_libraries(test_stun PRIVATE ws2_32 winmm)
+elseif(APPLE)
+    if(IOS)
+        target_link_libraries(test_stun PRIVATE "-framework CoreFoundation" "-framework Foundation")
+    else()
+        target_link_libraries(test_stun PRIVATE "-framework CoreFoundation" "-framework Foundation" "-framework AppKit")
+    endif()
 endif()
 endif()
 

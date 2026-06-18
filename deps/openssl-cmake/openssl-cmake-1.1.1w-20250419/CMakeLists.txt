@@ -101,6 +101,9 @@ set( LIB_SOVERSION ${VERSION_MAJOR}.${VERSION_MINOR} )
 
 add_definitions( -DOPENSSL_NO_ASM )
 add_definitions( -DOPENSSL_NO_STATIC_ENGINE )
+if( APPLE )
+    add_definitions( -DOPENSSL_NO_FIPS )
+endif()
 
 if( MSVC )
   include( MSVCRuntime )

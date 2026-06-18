@@ -73,6 +73,7 @@ macro(webrtc_add_definitions)
             add_definitions(
                 -DWEBRTC_POSIX
                 -DWEBRTC_IOS
+                -DWEBRTC_MAC
             )
         else()
             add_definitions(
