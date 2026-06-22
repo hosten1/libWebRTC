@@ -278,14 +278,15 @@ endif()
 
 # ==================== STUN 测试程序 ====================
 if(WEBRTC_BUILD_WEBRTC_STUN)
-add_executable(test_stun test/test_stun.cc)
-target_link_libraries(test_stun PRIVATE
-    libwebrtc
-    abseil
-    OpenSSL::SSL
-    OpenSSL::Crypto
-)
+
 if(WIN32)
+    add_executable(test_stun test/test_stun.cc)
+    target_link_libraries(test_stun PRIVATE
+        libwebrtc
+        abseil
+        OpenSSL::SSL
+        OpenSSL::Crypto
+    )
     target_link_libraries(test_stun PRIVATE ws2_32 winmm)
 elseif(APPLE)
     if(IOS)
