@@ -174,7 +174,6 @@ Thread::Thread(std::unique_ptr<SocketServer> ss, bool do_init)
   if (do_init) {
     DoInit();
   }
-  //RTC_LOG(LS_INFO) << "[vrv_wy] Thread Thread";
 }
 
 Thread::~Thread() {
@@ -232,7 +231,6 @@ bool Thread::SetName(const std::string& name, const void* obj) {
 
 bool Thread::Start(Runnable* runnable) {
   RTC_DCHECK(!IsRunning());
-  //RTC_LOG(LS_INFO) << "[vrv_wy] Thread Start: name=" << name_.c_str() << ",fd=" << thread_;
   if (IsRunning())
     return false;
 
@@ -269,12 +267,10 @@ bool Thread::Start(Runnable* runnable) {
 }
 
 bool Thread::WrapCurrent() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] Thread WrapCurrent: name=" << name_.c_str() << ",fd=" << thread_;
   return WrapCurrentWithThreadManager(ThreadManager::Instance(), true);
 }
 
 void Thread::UnwrapCurrent() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] Thread UnwrapCurrent: name=" << name_.c_str() << ",fd=" << thread_;
   // Clears the platform-specific thread-specific storage.
   ThreadManager::Instance()->SetCurrentThread(nullptr);
 #if defined(WEBRTC_WIN)
@@ -359,7 +355,6 @@ void* Thread::PreRun(void* pv) {
 }
 
 void Thread::Run() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] Thread Run: name=" << name_.c_str() << ",fd=" << thread_;
   ProcessMessages(kForever);
 }
 
@@ -369,7 +364,6 @@ bool Thread::IsOwned() {
 }
 
 void Thread::Stop() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] Thread Stop: name=" << name_.c_str() << ",fd=" << thread_;
   MessageQueue::Quit();
   Join();  
 }

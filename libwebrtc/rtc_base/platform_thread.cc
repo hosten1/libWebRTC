@@ -70,7 +70,6 @@ void* PlatformThread::StartThread(void* param) {
 #endif  // defined(WEBRTC_WIN)
 
 void PlatformThread::Start() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] PlatformThread Start: name=" << name_.c_str();
   RTC_DCHECK(thread_checker_.IsCurrent());
   RTC_DCHECK(!thread_) << "Thread already started?";
 #if defined(WEBRTC_WIN)
@@ -107,7 +106,6 @@ PlatformThreadRef PlatformThread::GetThreadRef() const {
 }
 
 void PlatformThread::Stop() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] PlatformThread Stop: name=" << name_.c_str();
   RTC_DCHECK(thread_checker_.IsCurrent());
   if (!IsRunning())
     return;
@@ -125,7 +123,6 @@ void PlatformThread::Stop() {
 }
 
 void PlatformThread::Run() {
-  //RTC_LOG(LS_INFO) << "[vrv_wy] PlatformThread Run: name=" << name_.c_str();
   // Attach the worker thread checker to this thread.
   RTC_DCHECK(spawned_thread_checker_.IsCurrent());
   rtc::SetCurrentThreadName(name_.c_str());
