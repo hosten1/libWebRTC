@@ -8,23 +8,25 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "bit_buffer.h"
+#include "rtc_base/bit_buffer.h"
 
 #include <algorithm>
 #include <limits>
+
+#include "rtc_base/checks.h"
 
 namespace {
 
 // Returns the lowest (right-most) |bit_count| bits in |byte|.
 uint8_t LowestBits(uint8_t byte, size_t bit_count) {
-//  RTC_DCHECK_LE(bit_count, 8);
+  RTC_DCHECK_LE(bit_count, 8);
   return byte & ((1 << bit_count) - 1);
 }
 
 // Returns the highest (left-most) |bit_count| bits in |byte|, shifted to the
 // lowest bits (to the right).
 uint8_t HighestBits(uint8_t byte, size_t bit_count) {
-//  RTC_DCHECK_LE(bit_count, 8);
+  RTC_DCHECK_LE(bit_count, 8);
   uint8_t shift = 8 - static_cast<uint8_t>(bit_count);
   uint8_t mask = 0xFF << shift;
   return (byte & mask) >> shift;
@@ -42,9 +44,9 @@ uint8_t WritePartialByte(uint8_t source,
                          size_t source_bit_count,
                          uint8_t target,
                          size_t target_bit_offset) {
-//  RTC_DCHECK(target_bit_offset < 8);
-//  RTC_DCHECK(source_bit_count < 9);
-//  RTC_DCHECK(source_bit_count <= (8 - target_bit_offset));
+  RTC_DCHECK(target_bit_offset < 8);
+  RTC_DCHECK(source_bit_count < 9);
+  RTC_DCHECK(source_bit_count <= (8 - target_bit_offset));
   // Generate a mask for just the bits we're going to overwrite, so:
   uint8_t mask =
       // The number of bits we want, in the most significant bits...
@@ -73,8 +75,8 @@ namespace rtc {
 
 BitBuffer::BitBuffer(const uint8_t* bytes, size_t byte_count)
     : bytes_(bytes), byte_count_(byte_count), byte_offset_(), bit_offset_() {
-//  RTC_DCHECK(static_cast<uint64_t>(byte_count_) <=
-//             std::numeric_limits<uint32_t>::max());
+  RTC_DCHECK(static_cast<uint64_t>(byte_count_) <=
+             std::numeric_limits<uint32_t>::max());
 }
 
 uint64_t BitBuffer::RemainingBitCount() const {
@@ -86,7 +88,7 @@ bool BitBuffer::ReadUInt8(uint8_t* val) {
   if (!ReadBits(&bit_val, sizeof(uint8_t) * 8)) {
     return false;
   }
-//  RTC_DCHECK(bit_val <= std::numeric_limits<uint8_t>::max());
+  RTC_DCHECK(bit_val <= std::numeric_limits<uint8_t>::max());
   *val = static_cast<uint8_t>(bit_val);
   return true;
 }
@@ -96,7 +98,7 @@ bool BitBuffer::ReadUInt16(uint16_t* val) {
   if (!ReadBits(&bit_val, sizeof(uint16_t) * 8)) {
     return false;
   }
-//  RTC_DCHECK(bit_val <= std::numeric_limits<uint16_t>::max());
+  RTC_DCHECK(bit_val <= std::numeric_limits<uint16_t>::max());
   *val = static_cast<uint16_t>(bit_val);
   return true;
 }
@@ -109,7 +111,7 @@ bool BitBuffer::PeekBits(uint32_t* val, size_t bit_count) {
   // TODO(nisse): Could allow bit_count == 0 and always return success. But
   // current code reads one byte beyond end of buffer in the case that
   // RemainingBitCount() == 0 and bit_count == 0.
-//  RTC_DCHECK(bit_count > 0);
+  RTC_DCHECK(bit_count > 0);
   if (!val || bit_count > RemainingBitCount() || bit_count > 32) {
     return false;
   }
@@ -157,6 +159,29 @@ bool BitBuffer::ConsumeBits(size_t bit_count) {
   return true;
 }
 
+bool BitBuffer::ReadNonSymmetric(uint32_t* val, uint32_t num_values) {
+  RTC_DCHECK_GT(num_values, 0);
+  RTC_DCHECK_LE(num_values, uint32_t{1} << 31);
+  size_t count_bits = CountBits(num_values);
+  uint32_t num_min_bits_values = (uint32_t{1} << count_bits) - num_values;
+
+  if (!ReadBits(val, count_bits - 1)) {
+    return false;
+  }
+
+  if (*val < num_min_bits_values) {
+    return true;
+  }
+
+  uint32_t extra_bit;
+  if (!ReadBits(&extra_bit, /*bit_count=*/1)) {
+    return false;
+  }
+
+  *val = (*val << 1) + extra_bit - num_min_bits_values;
+  return true;
+}
+
 bool BitBuffer::ReadExponentialGolomb(uint32_t* val) {
   if (!val) {
     return false;
@@ -175,14 +200,14 @@ bool BitBuffer::ReadExponentialGolomb(uint32_t* val) {
   }
 
   // We should either be at the end of the stream, or the next bit should be 1.
-//  RTC_DCHECK(!PeekBits(&peeked_bit, 1) || peeked_bit == 1);
+  RTC_DCHECK(!PeekBits(&peeked_bit, 1) || peeked_bit == 1);
 
   // The bit count of the value is the number of zeros + 1. Make sure that many
   // bits fits in a uint32_t and that we have enough bits left for it, and then
   // read the value.
   size_t value_bit_count = zero_bit_count + 1;
   if (value_bit_count > 32 || !ReadBits(val, value_bit_count)) {
-//    RTC_CHECK(Seek(original_byte_offset, original_bit_offset));
+    RTC_CHECK(Seek(original_byte_offset, original_bit_offset));
     return false;
   }
   *val -= 1;
@@ -204,8 +229,8 @@ bool BitBuffer::ReadSignedExponentialGolomb(int32_t* val) {
 
 void BitBuffer::GetCurrentOffset(size_t* out_byte_offset,
                                  size_t* out_bit_offset) {
-//  RTC_CHECK(out_byte_offset != nullptr);
-//  RTC_CHECK(out_bit_offset != nullptr);
+  RTC_CHECK(out_byte_offset != nullptr);
+  RTC_CHECK(out_bit_offset != nullptr);
   *out_byte_offset = byte_offset_;
   *out_bit_offset = bit_offset_;
 }
@@ -278,6 +303,27 @@ bool BitBufferWriter::WriteBits(uint64_t val, size_t bit_count) {
 
   // All done! Consume the bits we've written.
   return ConsumeBits(total_bits);
+}
+
+bool BitBufferWriter::WriteNonSymmetric(uint32_t val, uint32_t num_values) {
+  RTC_DCHECK_LT(val, num_values);
+  RTC_DCHECK_LE(num_values, uint32_t{1} << 31);
+  size_t count_bits = CountBits(num_values);
+  uint32_t num_min_bits_values = (uint32_t{1} << count_bits) - num_values;
+
+  return val < num_min_bits_values
+             ? WriteBits(val, count_bits - 1)
+             : WriteBits(val + num_min_bits_values, count_bits);
+}
+
+size_t BitBufferWriter::SizeNonSymmetricBits(uint32_t val,
+                                             uint32_t num_values) {
+  RTC_DCHECK_LT(val, num_values);
+  RTC_DCHECK_LE(num_values, uint32_t{1} << 31);
+  size_t count_bits = CountBits(num_values);
+  uint32_t num_min_bits_values = (uint32_t{1} << count_bits) - num_values;
+
+  return val < num_min_bits_values ? (count_bits - 1) : count_bits;
 }
 
 bool BitBufferWriter::WriteExponentialGolomb(uint32_t val) {

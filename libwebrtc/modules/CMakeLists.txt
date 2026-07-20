@@ -63,6 +63,8 @@ if(WEBRTC_BUILD_FEC)
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_format.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/ulpfec_header_reader_writer.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/ulpfec_receiver_impl.cc
+        ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/ulpfec_generator.cc
+        ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/flexfec_sender.cc
     )
 else()
     message(STATUS "[libwebrtc] FEC modules disabled")

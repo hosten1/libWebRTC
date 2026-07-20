@@ -11,7 +11,8 @@
       'include_dirs':
       [
         '.',
-        'libwebrtc'
+        'libwebrtc',
+        'deps/abseil-cpp/abseil-cpp',
       ]
     },
     'sources':
@@ -152,6 +153,9 @@
       'libwebrtc/modules/rtp_rtcp/source/fec_private_tables_random.cc',
       'libwebrtc/modules/rtp_rtcp/source/flexfec_header_reader_writer.cc',
       'libwebrtc/modules/rtp_rtcp/source/flexfec_receiver.cc',
+      # LYM_FIX: fix flexfec_sender path from include to source
+      'libwebrtc/modules/rtp_rtcp/source/ulpfec_generator.cc',
+      'libwebrtc/modules/rtp_rtcp/source/flexfec_sender.cc',
       'libwebrtc/modules/rtp_rtcp/source/forward_error_correction.cc',
       'libwebrtc/modules/rtp_rtcp/source/forward_error_correction_internal.cc',
       'libwebrtc/modules/rtp_rtcp/source/remote_ntp_time_estimator.cc',
@@ -389,6 +393,9 @@
       'libwebrtc/common_video/h264/sps_parser.h',
       'libwebrtc/common_video/h264/sps_vui_rewriter.h',
       'libwebrtc/modules/rtp_rtcp/include/flexfec_receiver.h',
+      # luoyongmeng add flexfec
+      'libwebrtc/modules/rtp_rtcp/include/ulpfec_generator.h',
+      'libwebrtc/modules/rtp_rtcp/include/flexfec_sender.h',
       'libwebrtc/modules/rtp_rtcp/include/remote_ntp_time_estimator.h',
       'libwebrtc/modules/rtp_rtcp/include/ulpfec_receiver.h',
       'libwebrtc/modules/rtp_rtcp/source/fec_private_tables_bursty.h',
@@ -469,6 +476,7 @@
       'libwebrtc/rtc_base/synchronization/yield.h',
       'libwebrtc/rtc_base/synchronization/yield.cc',
       # stun和线程相关
+      'libwebrtc/api/transport/stun.h',
       'libwebrtc/rtc_base/async_socket.h',
       'libwebrtc/rtc_base/async_socket.cc',
       'libwebrtc/rtc_base/async_resolver_interface.h',

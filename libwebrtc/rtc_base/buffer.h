@@ -12,6 +12,7 @@
 #define RTC_BASE_BUFFER_H_
 
 #include <stdint.h>
+
 #include <algorithm>
 #include <cstring>
 #include <memory>
@@ -351,23 +352,25 @@ class BufferT {
     swap(a.capacity_, b.capacity_);
     swap(a.data_, b.data_);
   }
-    // lym 新增支持获取数据 数据获取后会移除已经获取的数据
-    template <typename U = T,
-                typename std::enable_if<
-                  internal::BufferCompat<T, U>::value>::type* = nullptr>
-    int getData(U* data, size_t size) {
-      RTC_DCHECK(IsConsistent());
-        if(size > size_)return -1;
-        memset(data, 0, size * sizeof(U));
-        //取10s 数据
-        memcpy(data, data_.get(), size * sizeof(U));
-        // 处理完这部分数据后移动到下一个数据，
-        memmove(data_.get(), data_.get() + size,
-                (size_ - size) * sizeof(U));
-        
-      SetSize(size_ - size);
-      return 0;
-   }
+
+  // lym 新增支持获取数据 数据获取后会移除已经获取的数据
+  template <typename U = T,
+            typename std::enable_if<
+                internal::BufferCompat<T, U>::value>::type* = nullptr>
+  int getData(U* data, size_t size) {
+    RTC_DCHECK(IsConsistent());
+    if (size > size_)
+      return -1;
+    memset(data, 0, size * sizeof(U));
+    // 取10s 数据
+    memcpy(data, data_.get(), size * sizeof(U));
+    // 处理完这部分数据后移动到下一个数据，
+    memmove(data_.get(), data_.get() + size, (size_ - size) * sizeof(U));
+
+    SetSize(size_ - size);
+    return 0;
+  }
+  // lym end
 
  private:
   void EnsureCapacityWithHeadroom(size_t capacity, bool extra_headroom) {

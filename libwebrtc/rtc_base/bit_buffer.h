@@ -11,32 +11,10 @@
 #ifndef RTC_BASE_BIT_BUFFER_H_
 #define RTC_BASE_BIT_BUFFER_H_
 
-
-
-// Put this in the declarations for a class to be unassignable.
-#define RTC_DISALLOW_ASSIGN(TypeName) \
-  TypeName& operator=(const TypeName&) = delete
-
-// A macro to disallow the copy constructor and operator= functions. This should
-// be used in the declarations for a class.
-#define RTC_DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&) = delete;          \
-  RTC_DISALLOW_ASSIGN(TypeName)
-
-// A macro to disallow all the implicit constructors, namely the default
-// constructor, copy constructor and operator= functions.
-//
-// This should be used in the declarations for a class that wants to prevent
-// anyone from instantiating it. This is especially useful for classes
-// containing only static methods.
-#define RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName) \
-  TypeName() = delete;                               \
-  RTC_DISALLOW_COPY_AND_ASSIGN(TypeName)
-
 #include <stddef.h>  // For size_t.
 #include <stdint.h>  // For integer types.
 
-//#include "rtc_base/constructor_magic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace rtc {
 
@@ -72,6 +50,18 @@ class BitBuffer {
   // data left for the specified number of bits. Doesn't move the current
   // offset.
   bool PeekBits(uint32_t* val, size_t bit_count);
+
+  // Reads value in range [0, num_values - 1].
+  // This encoding is similar to ReadBits(val, Ceil(Log2(num_values)),
+  // but reduces wastage incurred when encoding non-power of two value ranges
+  // Non symmetric values are encoded as:
+  // 1) n = countbits(num_values)
+  // 2) k = (1 << n) - num_values
+  // Value v in range [0, k - 1] is encoded in (n-1) bits.
+  // Value v in range [k, num_values - 1] is encoded as (v+k) in n bits.
+  // https://aomediacodec.github.io/av1-spec/#nsn
+  // Returns false if there isn't enough data left.
+  bool ReadNonSymmetric(uint32_t* val, uint32_t num_values);
 
   // Reads the exponential golomb encoded value at the current offset.
   // Exponential golomb values are encoded as:
@@ -127,6 +117,14 @@ class BitBufferWriter : public BitBuffer {
   // Writes bit-sized values to the buffer. Returns false if there isn't enough
   // room left for the specified number of bits.
   bool WriteBits(uint64_t val, size_t bit_count);
+
+  // Writes value in range [0, num_values - 1]
+  // See ReadNonSymmetric documentation for the format,
+  // Call SizeNonSymmetricBits to get number of bits needed to store the value.
+  // Returns false if there isn't enough room left for the value.
+  bool WriteNonSymmetric(uint32_t val, uint32_t num_values);
+  // Returns number of bits required to store |val| with NonSymmetric encoding.
+  static size_t SizeNonSymmetricBits(uint32_t val, uint32_t num_values);
 
   // Writes the exponential golomb encoded version of the supplied value.
   // Returns false if there isn't enough room left for the value.

@@ -66,6 +66,7 @@ class FlexfecReceiver {
 
   // Logging and stats.
   Clock* const clock_;
+    int64_t last_flexfec_packet_ms_ RTC_GUARDED_BY(sequence_checker_);
   int64_t last_recovered_packet_ms_ RTC_GUARDED_BY(sequence_checker_);
   FecPacketCounter packet_counter_ RTC_GUARDED_BY(sequence_checker_);
 

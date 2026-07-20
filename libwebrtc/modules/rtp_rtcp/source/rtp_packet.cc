@@ -16,17 +16,11 @@
 
 #include "modules/rtp_rtcp/source/byte_io.h"
 #include "rtc_base/checks.h"
-//#include "rtc_base/logging.h"
+#include "rtc_base/logging.h"
 #include "rtc_base/numerics/safe_conversions.h"
+#include "rtc_base/strings/string_builder.h"
 
 namespace webrtc {
-// lym
-static constexpr int kMinId = 1;
-static constexpr int kMaxId = 255;
-static constexpr int kMaxValueSize = 255;
-static constexpr int kOneByteHeaderExtensionMaxId = 14;
-static constexpr int kOneByteHeaderExtensionMaxValueSize = 16;
-// lym
 namespace {
 constexpr size_t kFixedHeaderSize = 12;
 constexpr uint8_t kRtpVersion = 2;
@@ -127,7 +121,7 @@ void RtpPacket::CopyHeaderFrom(const RtpPacket& packet) {
   extensions_ = packet.extensions_;
   extension_entries_ = packet.extension_entries_;
   extensions_size_ = packet.extensions_size_;
-  buffer_.SetData(packet.data(), packet.headers_size());
+  buffer_ = packet.buffer_.Slice(0, packet.headers_size());
   // Reset payload and padding.
   payload_size_ = 0;
   padding_size_ = 0;
@@ -163,6 +157,53 @@ void RtpPacket::SetSsrc(uint32_t ssrc) {
   ByteWriter<uint32_t>::WriteBigEndian(WriteAt(8), ssrc);
 }
 
+void RtpPacket::ZeroMutableExtensions() {
+  for (const ExtensionInfo& extension : extension_entries_) {
+    switch (extensions_.GetType(extension.id)) {
+      case RTPExtensionType::kRtpExtensionNone: {
+        RTC_LOG(LS_WARNING) << "Unidentified extension in the packet.";
+        break;
+      }
+      case RTPExtensionType::kRtpExtensionVideoTiming: {
+        // Nullify last entries, starting at pacer delay.
+        // These are set by pacer and SFUs
+        if (VideoSendTiming::kPacerExitDeltaOffset < extension.length) {
+          memset(WriteAt(extension.offset +
+                         VideoSendTiming::kPacerExitDeltaOffset),
+                 0, extension.length - VideoSendTiming::kPacerExitDeltaOffset);
+        }
+        break;
+      }
+      case RTPExtensionType::kRtpExtensionTransportSequenceNumber:
+      case RTPExtensionType::kRtpExtensionTransportSequenceNumber02:
+      case RTPExtensionType::kRtpExtensionTransmissionTimeOffset:
+      case RTPExtensionType::kRtpExtensionAbsoluteSendTime: {
+        // Nullify whole extension, as it's filled in the pacer.
+        memset(WriteAt(extension.offset), 0, extension.length);
+        break;
+      }
+      case RTPExtensionType::kRtpExtensionAudioLevel:
+      case RTPExtensionType::kRtpExtensionAbsoluteCaptureTime:
+      case RTPExtensionType::kRtpExtensionColorSpace:
+      case RTPExtensionType::kRtpExtensionFrameMarking:
+      case RTPExtensionType::kRtpExtensionGenericFrameDescriptor00:
+      case RTPExtensionType::kRtpExtensionGenericFrameDescriptor01:
+      case RTPExtensionType::kRtpExtensionGenericFrameDescriptor02:
+      case RTPExtensionType::kRtpExtensionMid:
+      case RTPExtensionType::kRtpExtensionNumberOfExtensions:
+      case RTPExtensionType::kRtpExtensionPlayoutDelay:
+      case RTPExtensionType::kRtpExtensionRepairedRtpStreamId:
+      case RTPExtensionType::kRtpExtensionRtpStreamId:
+      case RTPExtensionType::kRtpExtensionVideoContentType:
+      case RTPExtensionType::kRtpExtensionVideoRotation:
+      case RTPExtensionType::kRtpExtensionInbandComfortNoise: {
+        // Non-mutable extension. Don't change it.
+        break;
+      }
+    }
+  }
+}
+
 void RtpPacket::SetCsrcs(rtc::ArrayView<const uint32_t> csrcs) {
   RTC_DCHECK_EQ(extensions_size_, 0);
   RTC_DCHECK_EQ(payload_size_, 0);
@@ -180,30 +221,30 @@ void RtpPacket::SetCsrcs(rtc::ArrayView<const uint32_t> csrcs) {
 }
 
 rtc::ArrayView<uint8_t> RtpPacket::AllocateRawExtension(int id, size_t length) {
-  RTC_DCHECK_GE(id, kMinId);
-  RTC_DCHECK_LE(id, kMaxId);
+  RTC_DCHECK_GE(id, RtpExtension::kMinId);
+  RTC_DCHECK_LE(id, RtpExtension::kMaxId);
   RTC_DCHECK_GE(length, 1);
-  RTC_DCHECK_LE(length, kMaxValueSize);
+  RTC_DCHECK_LE(length, RtpExtension::kMaxValueSize);
   const ExtensionInfo* extension_entry = FindExtensionInfo(id);
   if (extension_entry != nullptr) {
     // Extension already reserved. Check if same length is used.
     if (extension_entry->length == length)
       return rtc::MakeArrayView(WriteAt(extension_entry->offset), length);
-//
-//    RTC_LOG(LS_ERROR) << "Length mismatch for extension id " << id
-//                      << ": expected "
-//                      << static_cast<int>(extension_entry->length)
-//                      << ". received " << length;
+
+    RTC_LOG(LS_ERROR) << "Length mismatch for extension id " << id
+                      << ": expected "
+                      << static_cast<int>(extension_entry->length)
+                      << ". received " << length;
     return nullptr;
   }
   if (payload_size_ > 0) {
-//    RTC_LOG(LS_ERROR) << "Can't add new extension id " << id
-//                      << " after payload was set.";
+    RTC_LOG(LS_ERROR) << "Can't add new extension id " << id
+                      << " after payload was set.";
     return nullptr;
   }
   if (padding_size_ > 0) {
-//    RTC_LOG(LS_ERROR) << "Can't add new extension id " << id
-//                      << " after padding was set.";
+    RTC_LOG(LS_ERROR) << "Can't add new extension id " << id
+                      << " after padding was set.";
     return nullptr;
   }
 
@@ -213,8 +254,8 @@ rtc::ArrayView<uint8_t> RtpPacket::AllocateRawExtension(int id, size_t length) {
   // length. Please note that a length of 0 also requires two-byte header
   // extension. See RFC8285 Section 4.2-4.3.
   const bool two_byte_header_required =
-      id > kOneByteHeaderExtensionMaxId ||
-      length > kOneByteHeaderExtensionMaxValueSize || length == 0;
+      id > RtpExtension::kOneByteHeaderExtensionMaxId ||
+      length > RtpExtension::kOneByteHeaderExtensionMaxValueSize || length == 0;
   RTC_CHECK(!two_byte_header_required || extensions_.ExtmapAllowMixed());
 
   uint16_t profile_id;
@@ -229,10 +270,10 @@ rtc::ArrayView<uint8_t> RtpPacket::AllocateRawExtension(int id, size_t length) {
           extensions_size_ + extension_entries_.size() +
           kTwoByteExtensionHeaderLength + length;
       if (extensions_offset + expected_new_extensions_size > capacity()) {
-//        RTC_LOG(LS_ERROR)
-//            << "Extension cannot be registered: Not enough space left in "
-//               "buffer to change to two-byte header extension and add new "
-//               "extension.";
+        RTC_LOG(LS_ERROR)
+            << "Extension cannot be registered: Not enough space left in "
+               "buffer to change to two-byte header extension and add new "
+               "extension.";
         return nullptr;
       }
       // Promote already written data to two-byte header format.
@@ -252,8 +293,8 @@ rtc::ArrayView<uint8_t> RtpPacket::AllocateRawExtension(int id, size_t length) {
   size_t new_extensions_size =
       extensions_size_ + extension_header_size + length;
   if (extensions_offset + new_extensions_size > capacity()) {
-//    RTC_LOG(LS_ERROR)
-//        << "Extension cannot be registered: Not enough space left in buffer.";
+    RTC_LOG(LS_ERROR)
+        << "Extension cannot be registered: Not enough space left in buffer.";
     return nullptr;
   }
 
@@ -353,7 +394,7 @@ uint8_t* RtpPacket::AllocatePayload(size_t size_bytes) {
 uint8_t* RtpPacket::SetPayloadSize(size_t size_bytes) {
   RTC_DCHECK_EQ(padding_size_, 0);
   if (payload_offset_ + size_bytes > capacity()) {
-//    RTC_LOG(LS_WARNING) << "Cannot set payload, not enough space in buffer.";
+    RTC_LOG(LS_WARNING) << "Cannot set payload, not enough space in buffer.";
     return nullptr;
   }
   payload_size_ = size_bytes;
@@ -363,10 +404,10 @@ uint8_t* RtpPacket::SetPayloadSize(size_t size_bytes) {
 
 bool RtpPacket::SetPadding(size_t padding_bytes) {
   if (payload_offset_ + payload_size_ + padding_bytes > capacity()) {
-//    RTC_LOG(LS_WARNING) << "Cannot set padding size " << padding_bytes
-//                        << ", only "
-//                        << (capacity() - payload_offset_ - payload_size_)
-//                        << " bytes left in buffer.";
+    RTC_LOG(LS_WARNING) << "Cannot set padding size " << padding_bytes
+                        << ", only "
+                        << (capacity() - payload_offset_ - payload_size_)
+                        << " bytes left in buffer.";
     return false;
   }
   padding_size_ = rtc::dchecked_cast<uint8_t>(padding_bytes);
@@ -404,40 +445,28 @@ bool RtpPacket::ParseBuffer(const uint8_t* buffer, size_t size) {
   if (size < kFixedHeaderSize) {
     return false;
   }
-// 第1个字节解析
-//  版本v占2bit
   const uint8_t version = buffer[0] >> 6;
-  if (version != kRtpVersion) {//kRtpVersion=2
+  if (version != kRtpVersion) {
     return false;
   }
-    // 解析填充标识位，占1bit；
   const bool has_padding = (buffer[0] & 0x20) != 0;
-    // 解析扩展标识位，占1bit；表示当前这个包是不是有RTP扩展头，1表示有，后面一定有extension
   const bool has_extension = (buffer[0] & 0x10) != 0;
-    // 解析CSRC计数（CC），占4位；当前的数据是由那些源共同生成；
   const uint8_t number_of_crcs = buffer[0] & 0x0f;
-//     第2个字节解析
-//    包结束标志位，占1bit，一般用来表示一个数据分包后的最后一个包
   marker_ = (buffer[1] & 0x80) != 0;
-//    有效负载类型 (PT)，占7bit;
   payload_type_ = buffer[1] & 0x7f;
-    // 第3 4个字节解析,解析当前包的序号，占2个字节；
+
   sequence_number_ = ByteReader<uint16_t>::ReadBigEndian(&buffer[2]);
-    // 第5 6 7 8个字节解析,解析当前包的时间戳，占4个字节；
   timestamp_ = ByteReader<uint32_t>::ReadBigEndian(&buffer[4]);
-    // 第9 10 11 12个字节解析,解析RTP包流的来源SSRC，占4个字节；
   ssrc_ = ByteReader<uint32_t>::ReadBigEndian(&buffer[8]);
-    // 如果 已有的包头信息 和CSRC占用的已经超过包大小，那就返回失败；
   if (size < kFixedHeaderSize + number_of_crcs * 4) {
     return false;
   }
- // 记录解析玩的位置，也就是指针偏移量
-  payload_offset_ = kFixedHeaderSize + number_of_crcs * 4;//kFixedHeaderSize=12
-// 如果有填充信息，这里会计算填充字段的大小；
+  payload_offset_ = kFixedHeaderSize + number_of_crcs * 4;
+
   if (has_padding) {
     padding_size_ = buffer[size - 1];
     if (padding_size_ == 0) {
-//      RTC_LOG(LS_WARNING) << "Padding was set, but padding size is zero";
+      RTC_LOG(LS_WARNING) << "Padding was set, but padding size is zero";
       return false;
     }
   } else {
@@ -456,95 +485,76 @@ bool RtpPacket::ParseBuffer(const uint8_t* buffer, size_t size) {
     |                        header extension                       |
     |                             ....                              |
     */
-//      记录扩展内容的位置
     size_t extension_offset = payload_offset_ + 4;
     if (extension_offset > size) {
       return false;
     }
-//      解析 profile ,占2个字节,这里固定是 0XBEDE 48862
     uint16_t profile =
         ByteReader<uint16_t>::ReadBigEndian(&buffer[payload_offset_]);
-//      解析 extension的个数也就是lenght,占2个字节
     size_t extensions_capacity =
         ByteReader<uint16_t>::ReadBigEndian(&buffer[payload_offset_ + 2]);
-//     WebRTC这里按照： 扩展的每个item占用4个字节，也就是以32bit对齐；
     extensions_capacity *= 4;
-    // 如果解析到这里已经超过包 大小就返回错误；
     if (extension_offset + extensions_capacity > size) {
       return false;
     }
-//      判断类型是不是正确的值
     if (profile != kOneByteExtensionProfileId &&
         profile != kTwoByteExtensionProfileId) {
-//      RTC_LOG(LS_WARNING) << "Unsupported rtp extension " << profile;
+      RTC_LOG(LS_WARNING) << "Unsupported rtp extension " << profile;
     } else {
       size_t extension_header_length = profile == kOneByteExtensionProfileId
-                                           ? kOneByteExtensionHeaderLength//1
-                                           : kTwoByteExtensionHeaderLength;//2
+                                           ? kOneByteExtensionHeaderLength
+                                           : kTwoByteExtensionHeaderLength;
       constexpr uint8_t kPaddingByte = 0;
       constexpr uint8_t kPaddingId = 0;
       constexpr uint8_t kOneByteHeaderExtensionReservedId = 15;
-        // 解析每一个item；
       while (extensions_size_ + extension_header_length < extensions_capacity) {
-          // 如果解析的id值是0，就累加一次
         if (buffer[extension_offset + extensions_size_] == kPaddingByte) {
           extensions_size_++;
           continue;
         }
         int id;
         uint8_t length;
-//          如果是OneByte的就按照 onej解析
         if (profile == kOneByteExtensionProfileId) {
-//        占用4bits，
           id = buffer[extension_offset + extensions_size_] >> 4;
-//        这个item占用的字节数，ont byte是要+1；占4bit；
           length = 1 + (buffer[extension_offset + extensions_size_] & 0xf);
           if (id == kOneByteHeaderExtensionReservedId ||
               (id == kPaddingId && length != 1)) {
             break;
           }
         } else {
-        // two  byte的每一项都占用1字节，初始extensions_size_是0，每解析一个item就累加一次；
           id = buffer[extension_offset + extensions_size_];
           length = buffer[extension_offset + extensions_size_ + 1];
         }
 
         if (extensions_size_ + extension_header_length + length >
             extensions_capacity) {
-//          RTC_LOG(LS_WARNING) << "Oversized rtp header extension.";
+          RTC_LOG(LS_WARNING) << "Oversized rtp header extension.";
           break;
         }
-       // 根据 extesion id 查找对应的值；
+
         ExtensionInfo& extension_info = FindOrCreateExtensionInfo(id);
         if (extension_info.length != 0) {
-//          RTC_LOG(LS_VERBOSE)
-//              << "Duplicate rtp header extension id " << id << ". Overwriting.";
+          RTC_LOG(LS_VERBOSE)
+              << "Duplicate rtp header extension id " << id << ". Overwriting.";
         }
-        // 计算 exteninfo的位置
+
         size_t offset =
             extension_offset + extensions_size_ + extension_header_length;
         if (!rtc::IsValueInRangeForNumericType<uint16_t>(offset)) {
-//          RTC_DLOG(LS_WARNING) << "Oversized rtp header extension.";
+          RTC_DLOG(LS_WARNING) << "Oversized rtp header extension.";
           break;
         }
         extension_info.offset = static_cast<uint16_t>(offset);
         extension_info.length = length;
-        /*累加长度  也就是:
-          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-          |  ID   | L=0   |     data      |  ID   |  L=1  |   data...
-          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      */
         extensions_size_ += extension_header_length + length;
       }
     }
-      // extension 解析完成后 ，记录指针偏移量；
     payload_offset_ = extension_offset + extensions_capacity;
   }
 
   if (payload_offset_ + padding_size_ > size) {
     return false;
   }
- // 剩下的数据大小
   payload_size_ = size - payload_offset_ - padding_size_;
   return true;
 }
@@ -586,9 +596,9 @@ rtc::ArrayView<const uint8_t> RtpPacket::FindExtension(
 rtc::ArrayView<uint8_t> RtpPacket::AllocateExtension(ExtensionType type,
                                                      size_t length) {
   // TODO(webrtc:7990): Add support for empty extensions (length==0).
-  if (length == 0 || length > kMaxValueSize ||
+  if (length == 0 || length > RtpExtension::kMaxValueSize ||
       (!extensions_.ExtmapAllowMixed() &&
-       length > kOneByteHeaderExtensionMaxValueSize)) {
+       length > RtpExtension::kOneByteHeaderExtensionMaxValueSize)) {
     return nullptr;
   }
 
@@ -598,7 +608,7 @@ rtc::ArrayView<uint8_t> RtpPacket::AllocateExtension(ExtensionType type,
     return nullptr;
   }
   if (!extensions_.ExtmapAllowMixed() &&
-      id > kOneByteHeaderExtensionMaxId) {
+      id > RtpExtension::kOneByteHeaderExtensionMaxId) {
     return nullptr;
   }
   return AllocateRawExtension(id, length);
@@ -607,6 +617,83 @@ rtc::ArrayView<uint8_t> RtpPacket::AllocateExtension(ExtensionType type,
 bool RtpPacket::HasExtension(ExtensionType type) const {
   // TODO(webrtc:7990): Add support for empty extensions (length==0).
   return !FindExtension(type).empty();
+}
+
+bool RtpPacket::IsExtensionReserved(ExtensionType type) const {
+  uint8_t id = extensions_.GetId(type);
+  if (id == ExtensionManager::kInvalidId) {
+    // Extension not registered.
+    return false;
+  }
+  return FindExtensionInfo(id) != nullptr;
+}
+
+bool RtpPacket::RemoveExtension(ExtensionType type) {
+  uint8_t id_to_remove = extensions_.GetId(type);
+  if (id_to_remove == ExtensionManager::kInvalidId) {
+    // Extension not registered.
+    RTC_LOG(LS_ERROR) << "Extension not registered, type=" << type
+                      << ", packet=" << ToString();
+    return false;
+  }
+
+  // Rebuild new packet from scratch.
+  RtpPacket new_packet;
+
+  new_packet.SetMarker(Marker());
+  new_packet.SetPayloadType(PayloadType());
+  new_packet.SetSequenceNumber(SequenceNumber());
+  new_packet.SetTimestamp(Timestamp());
+  new_packet.SetSsrc(Ssrc());
+  new_packet.IdentifyExtensions(extensions_);
+
+  // Copy all extensions, except the one we are removing.
+  bool found_extension = false;
+  for (const ExtensionInfo& ext : extension_entries_) {
+    if (ext.id == id_to_remove) {
+      found_extension = true;
+    } else {
+      auto extension_data = new_packet.AllocateRawExtension(ext.id, ext.length);
+      if (extension_data.size() != ext.length) {
+        RTC_LOG(LS_ERROR) << "Failed to allocate extension id=" << ext.id
+                          << ", length=" << ext.length
+                          << ", packet=" << ToString();
+        return false;
+      }
+
+      // Copy extension data to new packet.
+      memcpy(extension_data.data(), ReadAt(ext.offset), ext.length);
+    }
+  }
+
+  if (!found_extension) {
+    RTC_LOG(LS_WARNING) << "Extension not present in RTP packet, type=" << type
+                        << ", packet=" << ToString();
+    return false;
+  }
+
+  // Copy payload data to new packet.
+  memcpy(new_packet.AllocatePayload(payload_size()), payload().data(),
+         payload_size());
+
+  // Allocate padding -- must be last!
+  new_packet.SetPadding(padding_size());
+
+  // Success, replace current packet with newly built packet.
+  *this = new_packet;
+  return true;
+}
+
+std::string RtpPacket::ToString() const {
+  rtc::StringBuilder result;
+  result << "{payload_type=" << payload_type_ << "marker=" << marker_
+         << ", sequence_number=" << sequence_number_
+         << ", padding_size=" << padding_size_ << ", timestamp=" << timestamp_
+         << ", ssrc=" << ssrc_ << ", payload_offset=" << payload_offset_
+         << ", payload_size=" << payload_size_ << ", total_size=" << size()
+         << "}";
+
+  return result.Release();
 }
 
 }  // namespace webrtc

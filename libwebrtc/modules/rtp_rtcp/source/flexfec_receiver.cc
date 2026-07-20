@@ -15,7 +15,7 @@
 #include "api/array_view.h"
 #include "api/scoped_refptr.h"
 #include "rtc_base/checks.h"
-//#include "rtc_base/logging.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 
@@ -49,6 +49,7 @@ FlexfecReceiver::FlexfecReceiver(
           ForwardErrorCorrection::CreateFlexfec(ssrc, protected_media_ssrc)),
       recovered_packet_receiver_(recovered_packet_receiver),
       clock_(clock),
+        last_flexfec_packet_ms_(-1),
       last_recovered_packet_ms_(-1) {
   // It's OK to create this object on a different thread/task queue than
   // the one used during main operation.
@@ -100,20 +101,23 @@ FlexfecReceiver::AddReceivedPacket(const RtpPacketReceived& packet) {
   if (received_packet->ssrc == ssrc_) {
     // This is a FlexFEC packet.
     if (packet.payload_size() < kMinFlexfecHeaderSize) {
-//      RTC_LOG(LS_WARNING) << "Truncated FlexFEC packet, discarding.";
+      RTC_LOG(LS_WARNING) << "Truncated FlexFEC packet, discarding.";
       return nullptr;
+    }
+    int64_t now_ms = clock_->TimeInMilliseconds();
+    if (now_ms - last_flexfec_packet_ms_ > kPacketLogIntervalMs) {
+      RTC_LOG(LS_INFO) << "Received FlexFEC packet with SSRC: " << ssrc_
+                       << ", sequence number: " << packet.SequenceNumber();
+      last_flexfec_packet_ms_ = now_ms;
     }
     received_packet->is_fec = true;
     ++packet_counter_.num_fec_packets;
 
     // Insert packet payload into erasure code.
-    // TODO(brandtr): Remove this memcpy when the FEC packet classes
-    // are using COW buffers internally.
     received_packet->pkt = rtc::scoped_refptr<ForwardErrorCorrection::Packet>(
         new ForwardErrorCorrection::Packet());
-    auto payload = packet.payload();
-    memcpy(received_packet->pkt->data, payload.data(), payload.size());
-    received_packet->pkt->length = payload.size();
+    received_packet->pkt->data =
+        packet.Buffer().Slice(packet.headers_size(), packet.payload_size());
   } else {
     // This is a media packet, or a FlexFEC packet belonging to some
     // other FlexFEC stream.
@@ -123,11 +127,12 @@ FlexfecReceiver::AddReceivedPacket(const RtpPacketReceived& packet) {
     received_packet->is_fec = false;
 
     // Insert entire packet into erasure code.
+    // Create a copy and fill with zeros all mutable extensions.
     received_packet->pkt = rtc::scoped_refptr<ForwardErrorCorrection::Packet>(
         new ForwardErrorCorrection::Packet());
-    // Create a copy and fill with zeros all mutable extensions.
-//    packet.CopyAndZeroMutableExtensions(received_packet->pkt->data);
-    received_packet->pkt->length = packet.size();
+    RtpPacketReceived packet_copy(packet);
+    packet_copy.ZeroMutableExtensions();
+    received_packet->pkt->data = packet_copy.Buffer();
   }
 
   ++packet_counter_.num_packets;
@@ -161,16 +166,17 @@ void FlexfecReceiver::ProcessReceivedPacket(
     // Set this flag first, since OnRecoveredPacket may end up here
     // again, with the same packet.
     recovered_packet->returned = true;
-    RTC_CHECK(recovered_packet->pkt);
+    RTC_CHECK_GT(recovered_packet->pkt->data.size(), 0);
     recovered_packet_receiver_->OnRecoveredPacket(
-        recovered_packet->pkt->data, recovered_packet->pkt->length);
+        recovered_packet->pkt->data.cdata(),
+        recovered_packet->pkt->data.size());
     // Periodically log the incoming packets.
     int64_t now_ms = clock_->TimeInMilliseconds();
     if (now_ms - last_recovered_packet_ms_ > kPacketLogIntervalMs) {
       uint32_t media_ssrc =
-          ForwardErrorCorrection::ParseSsrc(recovered_packet->pkt->data);
-//      RTC_LOG(LS_VERBOSE) << "Recovered media packet with SSRC: " << media_ssrc
-//                          << " from FlexFEC stream with SSRC: " << ssrc_ << ".";
+          ForwardErrorCorrection::ParseSsrc(recovered_packet->pkt->data.data());
+      RTC_LOG(LS_INFO) << "Recovered media packet with SSRC: " << media_ssrc
+                       << " from FlexFEC stream with SSRC: " << ssrc_ << ".";
       last_recovered_packet_ms_ = now_ms;
     }
   }
