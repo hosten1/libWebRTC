@@ -1,11 +1,14 @@
 {
+  'variables':{
+    # openssl variables:
+    'library%': 'static_library',
+  },
+   
   'target_defaults': {
     'dependencies':
     [
-      '../jsoncpp/jsoncpp.gyp:jsoncpp',
+#      '../openssl/openssl.gyp:openssl',
       'deps/abseil-cpp/abseil-cpp.gyp:abseil',
-      '../libuv/uv.gyp:libuv',
-      '../openssl/openssl.gyp:openssl'
     ],
     'direct_dependent_settings': {
       'include_dirs':
@@ -430,8 +433,8 @@
       'libwebrtc/rtc_base/physical_socket_server.h',
       'libwebrtc/rtc_base/experiments/jitter_upper_bound_experiment.h',
       'libwebrtc/rtc_base/memory_stream.h',
-      'libwebrtc/rtc_base/message_digest.h',
-      'libwebrtc/rtc_base/openssl_digest.h',
+#      'libwebrtc/rtc_base/message_digest.h',
+#      'libwebrtc/rtc_base/openssl_digest.h',
       # api task_queue headers
       'libwebrtc/api/task_queue/task_queue_base.h',
       # audio headers
@@ -444,6 +447,7 @@
       'libwebrtc/common_audio/signal_processing/real_fft.h',
       'libwebrtc/common_audio/signal_processing/refl_coef_to_lpc.h',
       'libwebrtc/common_audio/signal_processing/spl_init.h',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_utility.h',
       # LYM_ADD: end
       # lym fec end
       # lym red encode
@@ -476,7 +480,7 @@
       'libwebrtc/rtc_base/synchronization/yield.h',
       'libwebrtc/rtc_base/synchronization/yield.cc',
       # stun和线程相关
-      'libwebrtc/api/transport/stun.h',
+#      'libwebrtc/api/transport/stun.h',
       'libwebrtc/rtc_base/async_socket.h',
       'libwebrtc/rtc_base/async_socket.cc',
       'libwebrtc/rtc_base/async_resolver_interface.h',
@@ -527,15 +531,15 @@
       'libwebrtc/rtc_base/physical_socket_server.cc',
       'libwebrtc/rtc_base/experiments/jitter_upper_bound_experiment.cc',
       'libwebrtc/rtc_base/memory_stream.cc',
-      'libwebrtc/rtc_base/message_digest.cc',
-      'libwebrtc/rtc_base/openssl_digest.cc',
+#      'libwebrtc/rtc_base/message_digest.cc',
+#      'libwebrtc/rtc_base/openssl_digest.cc',
       # api task_queue
       'libwebrtc/api/task_queue/task_queue_base.cc',
       # audio modules
       'libwebrtc/api/audio/audio_frame.cc',
       'libwebrtc/api/audio/channel_layout.cc',
       # stun modules
-      'libwebrtc/api/transport/stun.cc',
+#      'libwebrtc/api/transport/stun.cc',
       # common_audio modules
       'libwebrtc/common_audio/signal_processing/min_max_operations.c',
       'libwebrtc/common_audio/signal_processing/randomization_functions.c',
@@ -543,6 +547,7 @@
       'libwebrtc/common_audio/signal_processing/refl_coef_to_lpc.c',
       'libwebrtc/common_audio/signal_processing/spl_init.c',
       'libwebrtc/common_audio/signal_processing/spl_inl.c',
+      'libwebrtc/modules/rtp_rtcp/source/rtp_utility.cc',
       # LYM_ADD: end
       # lym webrtc log 依赖 webrtc thread 相关
       'libwebrtc/rtc_base/log_sinks.cc',
@@ -592,7 +597,7 @@
         'OS == "linux"', {
             'defines': [
                 'WEBRTC_LINUX',
-                'USE_MEDIASOUP_ClASS',
+#                'USE_MEDIASOUP_ClASS',
                 # 'NDEBUG',
             ],
         },
@@ -606,13 +611,13 @@
       # Platform-specifics.
 
       [ 'OS != "win"', {
-        'cflags': [ '-std=c++14' ]
+        'cflags': [ '-std=c++11' ]
       }],
 
       [ 'OS == "mac"', {
         'xcode_settings':
         {
-          'OTHER_CPLUSPLUSFLAGS' : [ '-std=c++14' ]
+          'OTHER_CPLUSPLUSFLAGS' : [ '-std=c++11' ]
         }
       }],
       # LYM_ADD: platform-specific source files from CMakeLists.txt
@@ -638,7 +643,7 @@
       # Linux specific files
       [ 'OS == "linux"', {
         'sources': [
-          'libwebrtc/rtc_base/task_queue_libevent.cc',
+          'libwebrtc/rtc_base/task_queue_stdlib.cc',
           'libwebrtc/rtc_base/ifaddrs_converter.cc',
         ],
       }],
