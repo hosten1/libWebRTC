@@ -74,31 +74,30 @@ namespace webrtc
   // This enum must not have any gaps, i.e., all integers between
   // kRtpExtensionNone and kRtpExtensionNumberOfExtensions must be valid enum
   // entries.
-  enum RTPExtensionType : int
-  {
-    kRtpExtensionNone,
-    kRtpExtensionTransmissionTimeOffset,
-    kRtpExtensionAudioLevel,
-    kRtpExtensionAbsoluteSendTime,
-    kRtpExtensionAbsoluteCaptureTime,
-    kRtpExtensionVideoRotation,
-    kRtpExtensionTransportSequenceNumber,
-    kRtpExtensionTransportSequenceNumber02,
-    kRtpExtensionPlayoutDelay,
-    kRtpExtensionVideoContentType,
-    kRtpExtensionVideoTiming,
-    kRtpExtensionFrameMarking,
-    kRtpExtensionRtpStreamId,
-    kRtpExtensionRepairedRtpStreamId,
-    kRtpExtensionMid,
-    kRtpExtensionGenericFrameDescriptor00,
-    kRtpExtensionGenericFrameDescriptor = kRtpExtensionGenericFrameDescriptor00,
-    kRtpExtensionGenericFrameDescriptor01,
-    kRtpExtensionGenericFrameDescriptor02,
-    kRtpExtensionColorSpace,
-    kRtpExtensionInbandComfortNoise,
-    kRtpExtensionNumberOfExtensions // Must be the last entity in the enum.
-  };
+ enum RTPExtensionType : int {
+  kRtpExtensionNone,
+  kRtpExtensionTransmissionTimeOffset,
+  kRtpExtensionAudioLevel,
+  kRtpExtensionInbandComfortNoise,
+  kRtpExtensionAbsoluteSendTime,
+  kRtpExtensionAbsoluteCaptureTime,
+  kRtpExtensionVideoRotation,
+  kRtpExtensionTransportSequenceNumber,
+  kRtpExtensionTransportSequenceNumber02,
+  kRtpExtensionPlayoutDelay,
+  kRtpExtensionVideoContentType,
+  kRtpExtensionVideoTiming,
+  kRtpExtensionFrameMarking,
+  kRtpExtensionRtpStreamId,
+  kRtpExtensionRepairedRtpStreamId,
+  kRtpExtensionMid,
+  kRtpExtensionGenericFrameDescriptor00,
+  kRtpExtensionGenericFrameDescriptor = kRtpExtensionGenericFrameDescriptor00,
+  kRtpExtensionGenericFrameDescriptor01,
+  kRtpExtensionGenericFrameDescriptor02,
+  kRtpExtensionColorSpace,
+  kRtpExtensionNumberOfExtensions  // Must be the last entity in the enum.
+};
 
   enum RTCPAppSubTypes
   {

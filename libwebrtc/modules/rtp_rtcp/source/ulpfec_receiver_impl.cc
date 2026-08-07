@@ -13,6 +13,7 @@
 #include <memory>
 #include <utility>
 
+#include "absl/memory/memory.h"
 #include "api/scoped_refptr.h"
 #include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "rtc_base/logging.h"
@@ -24,7 +25,9 @@ std::unique_ptr<UlpfecReceiver> UlpfecReceiver::Create(
     uint32_t ssrc,
     RecoveredPacketReceiver* callback,
     rtc::ArrayView<const RtpExtension> extensions) {
-  return std::make_unique<UlpfecReceiverImpl>(ssrc, callback, extensions);
+  // LYM_FIX: absl::make_unique is C++14, use absl::make_unique for C++11
+  // return absl::make_unique<UlpfecReceiverImpl>(ssrc, callback, extensions);
+  return absl::make_unique<UlpfecReceiverImpl>(ssrc, callback, extensions);
 }
 
 UlpfecReceiverImpl::UlpfecReceiverImpl(
@@ -96,8 +99,10 @@ bool UlpfecReceiverImpl::AddReceivedRedPacket(const RtpPacket& rtp_packet,
   }
 
   // Remove RED header of incoming packet and store as a virtual RTP packet.
+  // LYM_FIX: absl::make_unique is C++14, use absl::make_unique for C++11
+  // auto received_packet = absl::make_unique<ForwardErrorCorrection::ReceivedPacket>();
   auto received_packet =
-      std::make_unique<ForwardErrorCorrection::ReceivedPacket>();
+      absl::make_unique<ForwardErrorCorrection::ReceivedPacket>();
   received_packet->pkt = new ForwardErrorCorrection::Packet();
 
   // Get payload type from RED header and sequence number from RTP header.

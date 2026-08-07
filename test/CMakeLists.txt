@@ -19,6 +19,14 @@ target_link_libraries(test_webrtc_threading PRIVATE
 if(WIN32)
     target_link_libraries(test_real_rtp_packet PRIVATE ws2_32 winmm)
     target_link_libraries(test_webrtc_threading PRIVATE ws2_32 winmm)
+elseif(APPLE)
+    if(IOS)
+        target_link_libraries(test_real_rtp_packet PRIVATE "-framework Foundation")
+        target_link_libraries(test_webrtc_threading PRIVATE "-framework Foundation")
+    else()
+        target_link_libraries(test_real_rtp_packet PRIVATE "-framework Foundation" "-framework AppKit")
+        target_link_libraries(test_webrtc_threading PRIVATE "-framework Foundation" "-framework AppKit")
+    endif()
 endif()
 
 # ==================== STUN 测试（需要 OpenSSL） ====================
