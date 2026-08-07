@@ -49,3 +49,24 @@ if(WEBRTC_BUILD_WEBRTC_STUN)
         endif()
     endif()
 endif()
+
+# ==================== 全量接口测试 Demo ====================
+add_executable(test_demo test_demo.cc)
+target_link_libraries(test_demo PRIVATE
+    libwebrtc
+    abseil
+)
+
+if(WIN32)
+    target_link_libraries(test_demo PRIVATE ws2_32 winmm)
+elseif(APPLE)
+    if(IOS)
+        target_link_libraries(test_demo PRIVATE "-framework Foundation")
+    else()
+        target_link_libraries(test_demo PRIVATE "-framework Foundation" "-framework AppKit")
+    endif()
+endif()
+
+if(WEBRTC_BUILD_WEBRTC_STUN)
+    target_link_libraries(test_demo PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+endif()
