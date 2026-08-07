@@ -106,15 +106,45 @@ FlexfecSender::~FlexfecSender() = default;
 // We are reusing the implementation from UlpfecGenerator for SetFecParameters,
 // AddRtpPacketAndGenerateFec, and FecAvailable.
 void FlexfecSender::SetFecParameters(const FecProtectionParams& params) {
+  // ===== luoyongmeng flexfec sender begin=====
   ulpfec_generator_.SetFecParameters(params);
+  // ===== luoyongmeng flexfec sender end =====
+  RTC_LOG(LS_INFO) << "[FlexFEC] SetFecParameters"
+                   << " [fec_rate=" << static_cast<int>(params.fec_rate)
+                   << ", max_fec_frames="
+                   << static_cast<int>(params.max_fec_frames)
+                   << ", fec_mask_type="
+                   << static_cast<int>(params.fec_mask_type)
+                   << ", payload_type=" << payload_type_
+                   << ", fec_ssrc=" << ssrc_
+                   << ", protected_media_ssrc=" << protected_media_ssrc_
+                   << "]";
 }
 
 bool FlexfecSender::AddRtpPacketAndGenerateFec(const RtpPacketToSend& packet) {
   // TODO(brandtr): Generalize this SSRC check when we support multistream
   // protection.
+  // ===== luoyongmeng flexfec sender begin=====
   RTC_DCHECK_EQ(packet.Ssrc(), protected_media_ssrc_);
-  return ulpfec_generator_.AddRtpPacketAndGenerateFec(
-             packet.Buffer(), packet.headers_size()) == 0;
+  const bool success =
+      ulpfec_generator_.AddRtpPacketAndGenerateFec(packet.Buffer(),
+                                                   packet.headers_size()) == 0;
+  // ===== luoyongmeng flexfec sender end =====
+  if (!success) {
+    RTC_LOG(LS_WARNING)
+        << "[FlexFEC] failed to add protected media packet for FEC generation"
+        << " [protected_ssrc=" << protected_media_ssrc_
+        << ", media_ssrc=" << packet.Ssrc()
+        << ", media_seq=" << packet.SequenceNumber()
+        << ", media_ts=" << packet.Timestamp() << "]";
+  } else {
+    RTC_LOG(LS_VERBOSE)
+        << "[FlexFEC] media packet added"
+        << " [protected_ssrc=" << protected_media_ssrc_
+        << ", media_seq=" << packet.SequenceNumber()
+        << ", media_ts=" << packet.Timestamp() << "]";
+  }
+  return success;
 }
 
 bool FlexfecSender::FecAvailable() const {

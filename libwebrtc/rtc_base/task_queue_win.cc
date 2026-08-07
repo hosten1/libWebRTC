@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <memory>
+#include "absl/memory/memory.h"
 #include <queue>
 #include <utility>
 
@@ -406,7 +407,7 @@ class TaskQueueWinFactory : public TaskQueueFactory {
 }  // namespace
 
 std::unique_ptr<TaskQueueFactory> CreateTaskQueueWinFactory() {
-  return std::make_unique<TaskQueueWinFactory>();
+  return absl::make_unique<TaskQueueWinFactory>();
 }
 
 }  // namespace webrtc

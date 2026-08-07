@@ -20,6 +20,7 @@
 
 #include <list>
 #include <memory>
+#include "absl/memory/memory.h"
 #include <type_traits>
 #include <utility>
 
@@ -239,7 +240,7 @@ void TaskQueueLibevent::PostDelayedTask(std::unique_ptr<QueuedTask> task,
                   rtc::dchecked_cast<int>(milliseconds % 1000) * 1000};
     event_add(&timer->ev, &tv);
   } else {
-    PostTask(std::make_unique<SetTimerTask>(std::move(task), milliseconds));
+    PostTask(absl::make_unique<SetTimerTask>(std::move(task), milliseconds));
   }
 }
 
@@ -314,7 +315,7 @@ class TaskQueueLibeventFactory final : public TaskQueueFactory {
 }  // namespace
 
 std::unique_ptr<TaskQueueFactory> CreateTaskQueueLibeventFactory() {
-  return std::make_unique<TaskQueueLibeventFactory>();
+  return absl::make_unique<TaskQueueLibeventFactory>();
 }
 
 }  // namespace webrtc

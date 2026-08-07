@@ -25,6 +25,8 @@
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/ip_address.h"
 #include "rtc_base/socket_address.h"
+// LYM_ADD: add absl string_view header for absl::string_view usage
+#include "absl/strings/string_view.h"
 
 namespace cricket {
 

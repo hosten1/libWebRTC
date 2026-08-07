@@ -22,7 +22,10 @@ namespace rtc {
 
 class RefCountedBase {
  public:
-  RefCountedBase() = default;
+  // LYM_FIX: GCC 4.8 (CentOS) C++11 cannot use = default with explicit
+  // constructor in-class initializer, use explicit constructor instead
+  // RefCountedBase() = default;
+  RefCountedBase() : ref_count_(0) {}
 
   void AddRef() const { ref_count_.IncRef(); }
   RefCountReleaseStatus Release() const {
@@ -57,7 +60,10 @@ class RefCountedBase {
 template <typename T>
 class RefCountedNonVirtual {
  public:
-  RefCountedNonVirtual() = default;
+  // LYM_FIX: GCC 4.8 (CentOS) C++11 cannot use = default with explicit
+  // constructor in-class initializer, use explicit constructor instead
+  // RefCountedNonVirtual() = default;
+  RefCountedNonVirtual() : ref_count_(0) {}
 
   void AddRef() const { ref_count_.IncRef(); }
   RefCountReleaseStatus Release() const {
