@@ -1,5 +1,7 @@
-# 引入公共编译配置模块
-include(${PROJECT_SOURCE_DIR}/cmake/webrtc_build_config.cmake)
+# ==================== [modules] 编译诊断 ====================
+message(STATUS "[modules] ====== Module: modules ======")
+message(STATUS "[modules] OS=${CMAKE_SYSTEM_NAME} ARCH=${CURRENT_CPU}")
+message(STATUS "[modules] Features: RED=${WEBRTC_BUILD_RED} FEC=${WEBRTC_BUILD_FEC} VIDEO=${WEBRTC_BUILD_VIDEO} GCC=${WEBRTC_BUILD_GCC}")
 
 # ==================== 核心模块（始终编译） ====================
 set(WEBRTC_MODULES_SOURCES
@@ -17,6 +19,7 @@ set(WEBRTC_MODULES_SOURCES
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_header_extension_map.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_header_extension_size.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_header_extensions.cc
+    ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_dependency_descriptor_extension.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet_received.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/rtp_packet.cc
     ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/source/time_util.cc
@@ -87,21 +90,6 @@ else()
     message(STATUS "[libwebrtc] Video modules disabled")
 endif()
 
-# ==================== Common Video 模块 ====================
-if(WEBRTC_BUILD_COMMON_VIDEO)
-    message(STATUS "[libwebrtc] Adding common video modules...")
-    list(APPEND WEBRTC_MODULES_SOURCES
-        ${WEBRTC_SRC_DIR}/common_video/h264/h264_bitstream_parser.cc
-        ${WEBRTC_SRC_DIR}/common_video/h264/h264_common.cc
-        ${WEBRTC_SRC_DIR}/common_video/h264/pps_parser.cc
-        ${WEBRTC_SRC_DIR}/common_video/h264/sps_parser.cc
-        ${WEBRTC_SRC_DIR}/common_video/h264/sps_vui_rewriter.cc
-        ${WEBRTC_SRC_DIR}/common_video/generic_frame_descriptor/generic_frame_info.cc
-    )
-else()
-    message(STATUS "[libwebrtc] Common video modules disabled")
-endif()
-
 # ==================== GCC 模块 ====================
 if(WEBRTC_BUILD_GCC)
     message(STATUS "[libwebrtc] Adding GCC modules...")
@@ -109,7 +97,6 @@ if(WEBRTC_BUILD_GCC)
         ${WEBRTC_SRC_DIR}/modules/pacing/interval_budget.cc
         ${WEBRTC_SRC_DIR}/modules/pacing/bitrate_prober.cc
         ${WEBRTC_SRC_DIR}/modules/pacing/paced_sender.cc
-        ${WEBRTC_SRC_DIR}/call/rtp_transport_controller_send.cc
         ${WEBRTC_SRC_DIR}/modules/rtp_rtcp/include/rtp_rtcp_defines.cc
         ${WEBRTC_SRC_DIR}/modules/congestion_controller/goog_cc/bitrate_estimator.cc
         ${WEBRTC_SRC_DIR}/modules/remote_bitrate_estimator/overuse_detector.cc
@@ -139,6 +126,9 @@ else()
 endif()
 
 # ==================== 创建 OBJECT 库 ====================
+list(LENGTH WEBRTC_MODULES_SOURCES _total)
+message(STATUS "[modules] Total source files: ${_total}")
+
 add_library(webrtc_modules OBJECT
     ${WEBRTC_MODULES_SOURCES}
 )
@@ -150,4 +140,5 @@ target_include_directories(
         ${DEPS_DIR}/abseil-cpp/abseil-cpp
 )
 
-message(STATUS "[libwebrtc] webrtc_modules configured")
+message(STATUS "[modules] webrtc_modules configured")
+message(STATUS "[modules] ====== End of modules ======")

@@ -15,7 +15,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/memory/memory.h"
 #include "api/task_queue/queued_task.h"
 #include "api/task_queue/task_queue_base.h"
 #include "api/units/time_delta.h"
@@ -94,11 +93,7 @@ class RepeatingTaskHandle {
   template <class Closure>
   static RepeatingTaskHandle Start(TaskQueueBase* task_queue,
                                    Closure&& closure) {
-    // LYM_FIX: absl::make_unique is C++14, use absl::make_unique for C++11
-    // auto repeating_task = absl::make_unique<
-    //     webrtc_repeating_task_impl::RepeatingTaskImpl<Closure>>(
-    //     task_queue, TimeDelta::Zero(), std::forward<Closure>(closure));
-    auto repeating_task = absl::make_unique<
+    auto repeating_task = std::make_unique<
         webrtc_repeating_task_impl::RepeatingTaskImpl<Closure>>(
         task_queue, TimeDelta::Zero(), std::forward<Closure>(closure));
     auto* repeating_task_ptr = repeating_task.get();
@@ -112,11 +107,7 @@ class RepeatingTaskHandle {
   static RepeatingTaskHandle DelayedStart(TaskQueueBase* task_queue,
                                           TimeDelta first_delay,
                                           Closure&& closure) {
-    // LYM_FIX: absl::make_unique is C++14, use absl::make_unique for C++11
-    // auto repeating_task = absl::make_unique<
-    //     webrtc_repeating_task_impl::RepeatingTaskImpl<Closure>>(
-    //     task_queue, first_delay, std::forward<Closure>(closure));
-    auto repeating_task = absl::make_unique<
+    auto repeating_task = std::make_unique<
         webrtc_repeating_task_impl::RepeatingTaskImpl<Closure>>(
         task_queue, first_delay, std::forward<Closure>(closure));
     auto* repeating_task_ptr = repeating_task.get();

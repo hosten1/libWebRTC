@@ -1,6 +1,3 @@
-# 引入公共编译配置模块
-include(${PROJECT_SOURCE_DIR}/cmake/webrtc_build_config.cmake)
-
 set(WEBRTC_SYSTEM_WRAPPERS_SOURCES
     ${WEBRTC_SRC_DIR}/system_wrappers/source/field_trial.cc
     ${WEBRTC_SRC_DIR}/system_wrappers/source/rtp_to_ntp_estimator.cc
@@ -21,4 +18,7 @@ target_include_directories(
         ${DEPS_DIR}/abseil-cpp/abseil-cpp
 )
 
-message(STATUS "[libwebrtc] system_wrappers module configured")
+list(LENGTH WEBRTC_SYSTEM_WRAPPERS_SOURCES _total)
+message(STATUS "[system_wrappers] Total source files: ${_total}")
+message(STATUS "[system_wrappers] Sources: field_trial, rtp_to_ntp_estimator, clock, cpu_features, metrics, sleep")
+message(STATUS "[system_wrappers] ====== End of system_wrappers ======")

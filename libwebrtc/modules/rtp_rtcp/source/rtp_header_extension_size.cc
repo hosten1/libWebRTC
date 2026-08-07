@@ -10,9 +10,15 @@
 
 #include "modules/rtp_rtcp/source/rtp_header_extension_size.h"
 
-#include "api/rtp_parameters.h"
+//#include "api/rtp_parameters.h"
 
 namespace webrtc {
+
+//lym
+static constexpr int kOneByteHeaderExtensionMaxId = 14;
+static constexpr int kOneByteHeaderExtensionMaxValueSize = 16;
+//lym
+
 
 int RtpHeaderExtensionSize(rtc::ArrayView<const RtpExtensionSize> extensions,
                            const RtpHeaderExtensionMap& registered_extensions) {
@@ -28,9 +34,9 @@ int RtpHeaderExtensionSize(rtc::ArrayView<const RtpExtensionSize> extensions,
       continue;
     // All extensions should use same size header. Check if the |extension|
     // forces to switch to two byte header that allows larger id and value size.
-    if (id > RtpExtension::kOneByteHeaderExtensionMaxId ||
+    if (id > kOneByteHeaderExtensionMaxId ||
         extension.value_size >
-            RtpExtension::kOneByteHeaderExtensionMaxValueSize) {
+            kOneByteHeaderExtensionMaxValueSize) {
       each_extension_header_size = 2;
     }
     values_size += extension.value_size;

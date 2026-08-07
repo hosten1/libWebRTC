@@ -18,129 +18,120 @@ set(DEPS_DIR ${PROJECT_SOURCE_DIR}/deps)
 # ==================== 编译选项 ====================
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-# 预编译选项 - 按功能控制模块编译
-option(WEBRTC_BUILD_WEBRTC_THREAD "Build WebRTC threading modules" ON)
-option(WEBRTC_BUILD_WEBRTC_STUN "Build WebRTC STUN related modules" ON)
-option(WEBRTC_BUILD_WEBRTC_AUDIO_TOOL "Build WebRTC audio tool modules" ON)
-option(WEBRTC_BUILD_RED "Build RED (RTP redundancy) modules" ON)
-option(WEBRTC_BUILD_FEC "Build FEC (Forward Error Correction) modules" ON)
-option(WEBRTC_BUILD_VIDEO "Build video-related modules" ON)
-option(WEBRTC_BUILD_COMMON_VIDEO "Build common video modules" ON)
-option(WEBRTC_BUILD_GCC "Build GCC modules" ON)
-option(WEBRTC_BUILD_WEBRTC_LOGGING "Build WebRTC logging related modules" ON)
-
-# 模块依赖检查
-if(WEBRTC_BUILD_VIDEO AND NOT WEBRTC_BUILD_COMMON_VIDEO)
-    message(STATUS "[libwebrtc] Auto-enabling WEBRTC_BUILD_COMMON_VIDEO (required by video modules)")
-    set(WEBRTC_BUILD_COMMON_VIDEO ON CACHE BOOL "Build common video modules" FORCE)
-endif()
-
-if(WEBRTC_BUILD_COMMON_VIDEO AND NOT WEBRTC_BUILD_VIDEO)
-    message(WARNING "[libwebrtc] WEBRTC_BUILD_COMMON_VIDEO enabled but WEBRTC_BUILD_VIDEO disabled. Common video modules may not be used.")
-endif()
+# 引入模块编译选项（集中管理所有 WEBRTC_BUILD_* 开关）
+include(${PROJECT_SOURCE_DIR}/cmake/webrtc_options.cmake)
 
 # ==================== OpenSSL 依赖管理 ====================
-# 支持多种使用方式：
-# 1. 使用 deps/openssl（推荐）：自动检测预编译库
-# 2. 使用 deps/openssl-cmake：使用 add_subdirectory 编译
-# 3. 使用系统 OpenSSL：设置 OPENSSL_ROOT_DIR
+# 支持多种使用方式（按优先级）：
+# 1. 系统 OpenSSL（通过 find_package 自动查找）
+# 2. deps/openssl 预编译库（自动检测平台）
+# 3. deps/openssl-cmake（add_subdirectory 编译源码）
 #
 # 用户可配置选项：
-# - OPENSSL_ROOT_DIR: OpenSSL 根目录（默认：${DEPS_DIR}/openssl）
+# - OPENSSL_ROOT_DIR: OpenSSL 根目录
 # - OPENSSL_USE_BUNDLED: 是否使用 bundled 版本（默认：ON）
 
 if(WEBRTC_BUILD_WEBRTC_STUN)
-    if(NOT DEFINED OPENSSL_ROOT_DIR)
-        set(OPENSSL_ROOT_DIR "${DEPS_DIR}/openssl" CACHE PATH "OpenSSL root directory")
-    endif()
-    
-    if(NOT DEFINED OPENSSL_USE_BUNDLED)
-        set(OPENSSL_USE_BUNDLED ON CACHE BOOL "Use bundled OpenSSL")
-    endif()
-    
-    # 根据平台确定库目录
-    if(WIN32)
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(OPENSSL_PLATFORM_DIR "win64")
-        else()
-            set(OPENSSL_PLATFORM_DIR "win32")
-        endif()
-    elseif(ANDROID)
-        if(ANDROID_ABI STREQUAL "armeabi-v7a")
-            set(OPENSSL_PLATFORM_DIR "android-arm")
-        elseif(ANDROID_ABI STREQUAL "arm64-v8a")
-            set(OPENSSL_PLATFORM_DIR "android-arm64")
-        elseif(ANDROID_ABI STREQUAL "x86")
-            set(OPENSSL_PLATFORM_DIR "android-x86")
-        elseif(ANDROID_ABI STREQUAL "x86_64")
-            set(OPENSSL_PLATFORM_DIR "android-x86_64")
-        else()
-            set(OPENSSL_PLATFORM_DIR "android-${ANDROID_ABI}")
-        endif()
-    elseif(APPLE)
-        if(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneOS.*" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
-            set(OPENSSL_PLATFORM_DIR "ios-device")
-        elseif(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneSimulator.*")
-            set(OPENSSL_PLATFORM_DIR "ios-simulator")
-        else()
-            set(OPENSSL_PLATFORM_DIR "macos")
-        endif()
+    # 优先使用 find_package 查找系统 OpenSSL
+    find_package(OpenSSL QUIET)
+
+    if(OpenSSL_FOUND)
+        message(STATUS "[libwebrtc] Found system OpenSSL: ${OpenSSL_VERSION}")
+        # OpenSSL::SSL 和 OpenSSL::Crypto 已由 find_package 定义
     else()
-        set(OPENSSL_PLATFORM_DIR "linux-x86_64")
-    endif()
-    
-    # 设置库路径
-    if(WIN32)
-        set(OPENSSL_SSL_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libssl.lib")
-        set(OPENSSL_CRYPTO_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libcrypto.lib")
-    else()
-        set(OPENSSL_SSL_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libssl.a")
-        set(OPENSSL_CRYPTO_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libcrypto.a")
-    endif()
-    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
-    
-    # 检查预编译库是否存在
-    set(OPENSSL_PREBUILT_FOUND FALSE)
-    if(EXISTS ${OPENSSL_SSL_LIB} AND EXISTS ${OPENSSL_CRYPTO_LIB} AND EXISTS ${OPENSSL_INCLUDE_DIR})
-        set(OPENSSL_PREBUILT_FOUND TRUE)
-        message(STATUS "[libwebrtc] Found pre-built OpenSSL for ${OPENSSL_PLATFORM_DIR}")
-    endif()
-    
-    if(OPENSSL_PREBUILT_FOUND)
-        # 创建导入库目标（预编译库）
-        add_library(OpenSSL::SSL STATIC IMPORTED GLOBAL)
-        add_library(OpenSSL::Crypto STATIC IMPORTED GLOBAL)
-        
-        set_target_properties(OpenSSL::SSL PROPERTIES
-            IMPORTED_LOCATION ${OPENSSL_SSL_LIB}
-            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
-        )
-        set_target_properties(OpenSSL::Crypto PROPERTIES
-            IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIB}
-            INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
-        )
-        
-    elseif(OPENSSL_USE_BUNDLED)
-        # 使用 add_subdirectory 编译 deps/openssl-cmake
-        set(OPENSSL_CMAKE_DIR "${DEPS_DIR}/openssl-cmake/openssl-cmake-1.1.1w-20250419")
-        
-        if(EXISTS ${OPENSSL_CMAKE_DIR}/CMakeLists.txt)
-            message(STATUS "[libwebrtc] Building OpenSSL from source using add_subdirectory")
-            
-            set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "Build static OpenSSL libraries")
-            set(WITH_APPS OFF CACHE BOOL "Don't build OpenSSL applications")
-            set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries only")
-            
-            add_subdirectory(${OPENSSL_CMAKE_DIR} ${PROJECT_BINARY_DIR}/openssl)
-            
-            if(TARGET ssl AND TARGET crypto)
-                add_library(OpenSSL::SSL ALIAS ssl)
-                add_library(OpenSSL::Crypto ALIAS crypto)
+        # 降级到预编译库或 bundled 编译
+        if(NOT DEFINED OPENSSL_ROOT_DIR)
+            set(OPENSSL_ROOT_DIR "${DEPS_DIR}/openssl" CACHE PATH "OpenSSL root directory")
+        endif()
+
+        if(NOT DEFINED OPENSSL_USE_BUNDLED)
+            set(OPENSSL_USE_BUNDLED ON CACHE BOOL "Use bundled OpenSSL")
+        endif()
+
+        # 根据平台确定库目录
+        if(WIN32)
+            if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+                set(OPENSSL_PLATFORM_DIR "win64")
             else()
-                message(FATAL_ERROR "[libwebrtc] OpenSSL targets not found")
+                set(OPENSSL_PLATFORM_DIR "win32")
+            endif()
+        elseif(ANDROID)
+            if(ANDROID_ABI STREQUAL "armeabi-v7a")
+                set(OPENSSL_PLATFORM_DIR "android-arm")
+            elseif(ANDROID_ABI STREQUAL "arm64-v8a")
+                set(OPENSSL_PLATFORM_DIR "android-arm64")
+            elseif(ANDROID_ABI STREQUAL "x86")
+                set(OPENSSL_PLATFORM_DIR "android-x86")
+            elseif(ANDROID_ABI STREQUAL "x86_64")
+                set(OPENSSL_PLATFORM_DIR "android-x86_64")
+            else()
+                set(OPENSSL_PLATFORM_DIR "android-${ANDROID_ABI}")
+            endif()
+        elseif(APPLE)
+            if(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneOS.*" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+                set(OPENSSL_PLATFORM_DIR "ios-device")
+            elseif(CMAKE_OSX_SYSROOT MATCHES ".*iPhoneSimulator.*")
+                set(OPENSSL_PLATFORM_DIR "ios-simulator")
+            else()
+                set(OPENSSL_PLATFORM_DIR "macos")
             endif()
         else()
-            message(FATAL_ERROR "[libwebrtc] OpenSSL CMake source not found at ${OPENSSL_CMAKE_DIR}")
+            set(OPENSSL_PLATFORM_DIR "linux-x86_64")
+        endif()
+
+        # 设置库路径
+        if(WIN32)
+            set(OPENSSL_SSL_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libssl.lib")
+            set(OPENSSL_CRYPTO_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libcrypto.lib")
+        else()
+            set(OPENSSL_SSL_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libssl.a")
+            set(OPENSSL_CRYPTO_LIB "${OPENSSL_ROOT_DIR}/lib/${OPENSSL_PLATFORM_DIR}/libcrypto.a")
+        endif()
+        set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+
+        # 检查预编译库是否存在
+        set(OPENSSL_PREBUILT_FOUND FALSE)
+        if(EXISTS ${OPENSSL_SSL_LIB} AND EXISTS ${OPENSSL_CRYPTO_LIB} AND EXISTS ${OPENSSL_INCLUDE_DIR})
+            set(OPENSSL_PREBUILT_FOUND TRUE)
+            message(STATUS "[libwebrtc] Found pre-built OpenSSL for ${OPENSSL_PLATFORM_DIR}")
+        endif()
+
+        if(OPENSSL_PREBUILT_FOUND)
+            # 创建导入库目标（预编译库）
+            add_library(OpenSSL::SSL STATIC IMPORTED GLOBAL)
+            add_library(OpenSSL::Crypto STATIC IMPORTED GLOBAL)
+
+            set_target_properties(OpenSSL::SSL PROPERTIES
+                IMPORTED_LOCATION ${OPENSSL_SSL_LIB}
+                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
+            )
+            set_target_properties(OpenSSL::Crypto PROPERTIES
+                IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIB}
+                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
+            )
+
+        elseif(OPENSSL_USE_BUNDLED)
+            # 使用 add_subdirectory 编译 deps/openssl-cmake
+            set(OPENSSL_CMAKE_DIR "${DEPS_DIR}/openssl-cmake/openssl-cmake-1.1.1w-20250419")
+
+            if(EXISTS ${OPENSSL_CMAKE_DIR}/CMakeLists.txt)
+                message(STATUS "[libwebrtc] Building OpenSSL from source using add_subdirectory")
+
+                set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "Build static OpenSSL libraries")
+                set(WITH_APPS OFF CACHE BOOL "Don't build OpenSSL applications")
+                set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries only")
+
+                add_subdirectory(${OPENSSL_CMAKE_DIR} ${PROJECT_BINARY_DIR}/openssl)
+
+                if(TARGET ssl AND TARGET crypto)
+                    add_library(OpenSSL::SSL ALIAS ssl)
+                    add_library(OpenSSL::Crypto ALIAS crypto)
+                else()
+                    message(FATAL_ERROR "[libwebrtc] OpenSSL targets not found")
+                endif()
+            else()
+                message(FATAL_ERROR "[libwebrtc] OpenSSL CMake source not found at ${OPENSSL_CMAKE_DIR}")
+            endif()
         endif()
     endif()
 endif()
@@ -148,22 +139,52 @@ endif()
 # ==================== 第三方依赖 ====================
 add_subdirectory(${DEPS_DIR}/abseil-cpp/abseil-cpp ${PROJECT_BINARY_DIR}/abseil)
 
-# ==================== 子模块 ====================
-# 引入各子模块（均创建为 OBJECT 库，遵循 rtc_base 模式）
+# ==================== 子模块（条件编译） ====================
+# 核心模块（始终编译）
 add_subdirectory(${WEBRTC_SRC_DIR}/rtc_base)
 add_subdirectory(${WEBRTC_SRC_DIR}/api)
 add_subdirectory(${WEBRTC_SRC_DIR}/system_wrappers)
+
+# 功能模块（按需编译）
 add_subdirectory(${WEBRTC_SRC_DIR}/common_audio)
+
+if(WEBRTC_BUILD_COMMON_VIDEO)
+    add_subdirectory(${WEBRTC_SRC_DIR}/common_video)
+endif()
+
+# modules 包含 RTP/RTCP 核心、RED、FEC、Video、GCC 等
 add_subdirectory(${WEBRTC_SRC_DIR}/modules)
 
+if(WEBRTC_BUILD_GCC)
+    add_subdirectory(${WEBRTC_SRC_DIR}/call)
+endif()
+
+if(WEBRTC_BUILD_WEBRTC_AUDIO_TOOL)
+    add_subdirectory(${WEBRTC_SRC_DIR}/audio)
+endif()
+
 # ==================== 创建 libwebrtc 主库 ====================
-add_library(libwebrtc STATIC
+set(WEBRTC_OBJECT_LIBS
     $<TARGET_OBJECTS:rtc_base>
     $<TARGET_OBJECTS:api>
     $<TARGET_OBJECTS:system_wrappers>
-    $<TARGET_OBJECTS:common_audio_module>
     $<TARGET_OBJECTS:webrtc_modules>
 )
+
+if(TARGET common_audio_module)
+    list(APPEND WEBRTC_OBJECT_LIBS $<TARGET_OBJECTS:common_audio_module>)
+endif()
+if(TARGET common_video)
+    list(APPEND WEBRTC_OBJECT_LIBS $<TARGET_OBJECTS:common_video>)
+endif()
+if(TARGET call_objects)
+    list(APPEND WEBRTC_OBJECT_LIBS $<TARGET_OBJECTS:call_objects>)
+endif()
+if(TARGET audio_objects)
+    list(APPEND WEBRTC_OBJECT_LIBS $<TARGET_OBJECTS:audio_objects>)
+endif()
+
+add_library(libwebrtc STATIC ${WEBRTC_OBJECT_LIBS})
 
 target_include_directories(libwebrtc PUBLIC
     ${PROJECT_SOURCE_DIR}
@@ -176,8 +197,8 @@ target_link_libraries(libwebrtc PUBLIC
 )
 
 if(MSVC)
-    target_compile_options(libwebrtc PRIVATE  
-    $<$<COMPILE_LANGUAGE:CXX>:/W0>  
+    target_compile_options(libwebrtc PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:/W0>
     $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
 else()
     target_compile_options(libwebrtc PRIVATE
@@ -247,53 +268,21 @@ install(DIRECTORY ${WEBRTC_SRC_DIR}/common_audio/
         DESTINATION include/webrtc/common_audio
         FILES_MATCHING PATTERN "*.h")
 
-install(DIRECTORY ${WEBRTC_SRC_DIR}/common_video/
-        DESTINATION include/webrtc/common_video
-        FILES_MATCHING PATTERN "*.h")
-
-install(DIRECTORY ${WEBRTC_SRC_DIR}/call/
-        DESTINATION include/webrtc/call
-        FILES_MATCHING PATTERN "*.h")
-
-
-if(WIN32)
-        # ==================== 测试程序 ====================
-add_executable(test_real_rtp_packet test/test_real_rtp_packet.cc)
-target_link_libraries(test_real_rtp_packet PRIVATE
-    libwebrtc
-    abseil
-)
-
-add_executable(test_webrtc_threading test/test_webrtc_threading.cc)
-target_link_libraries(test_webrtc_threading PRIVATE
-    libwebrtc
-    abseil
-)
-
-        if(WIN32)
-        target_link_libraries(test_real_rtp_packet PRIVATE ws2_32 winmm)
-        target_link_libraries(test_webrtc_threading PRIVATE ws2_32 winmm)
-        endif()
+if(WEBRTC_BUILD_COMMON_VIDEO)
+    install(DIRECTORY ${WEBRTC_SRC_DIR}/common_video/
+            DESTINATION include/webrtc/common_video
+            FILES_MATCHING PATTERN "*.h")
 endif()
 
-# ==================== STUN 测试程序 ====================
-if(WEBRTC_BUILD_WEBRTC_STUN)
-
-if(WIN32)
-    add_executable(test_stun test/test_stun.cc)
-    target_link_libraries(test_stun PRIVATE
-        libwebrtc
-        abseil
-        OpenSSL::SSL
-        OpenSSL::Crypto
-    )
-    target_link_libraries(test_stun PRIVATE ws2_32 winmm)
-elseif(APPLE)
-    if(IOS)
-        target_link_libraries(test_stun PRIVATE "-framework CoreFoundation" "-framework Foundation")
-    else()
-        target_link_libraries(test_stun PRIVATE "-framework CoreFoundation" "-framework Foundation" "-framework AppKit")
-    endif()
-endif()
+if(WEBRTC_BUILD_GCC)
+    install(DIRECTORY ${WEBRTC_SRC_DIR}/call/
+            DESTINATION include/webrtc/call
+            FILES_MATCHING PATTERN "*.h")
 endif()
 
+# ==================== 测试程序 ====================
+option(WEBRTC_BUILD_TESTS "Build test programs" OFF)
+if(WEBRTC_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(${PROJECT_SOURCE_DIR}/test)
+endif()

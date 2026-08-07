@@ -1,5 +1,9 @@
-# 引入公共编译配置模块
-include(${PROJECT_SOURCE_DIR}/cmake/webrtc_build_config.cmake)
+# ==================== [rtc_base] 编译诊断 ====================
+message(STATUS "[rtc_base] ====== Module: rtc_base ======")
+message(STATUS "[rtc_base] OS=${CMAKE_SYSTEM_NAME} ARCH=${CURRENT_CPU} COMPILER=${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "[rtc_base] IS_POSIX=${IS_POSIX} IS_CLANG=${IS_CLANG}")
+message(STATUS "[rtc_base] Features: THREAD=${WEBRTC_BUILD_WEBRTC_THREAD} LOGGING=${WEBRTC_BUILD_WEBRTC_LOGGING} STUN=${WEBRTC_BUILD_WEBRTC_STUN}")
+
 set(WEBRTC_BASE_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/rate_statistics.cc
     ${WEBRTC_SRC_DIR}/rtc_base/experiments/field_trial_parser.cc
@@ -36,8 +40,11 @@ set(WEBRTC_BASE_SOURCES
     ${WEBRTC_SRC_DIR}/rtc_base/strings/audio_format_to_string.cc
 )
 
+list(LENGTH WEBRTC_BASE_SOURCES _base_count)
+message(STATUS "[rtc_base] Common sources: ${_base_count} files")
+
 if(WIN32)
-# 添加Windows特有资源
+    message(STATUS "[rtc_base] Platform: WIN32 - using win32 rw_lock, socket server, window")
     list(APPEND WEBRTC_BASE_SOURCES
         ${WEBRTC_SRC_DIR}/rtc_base/win32.cc
         ${WEBRTC_SRC_DIR}/rtc_base/win32_socket_server.cc
@@ -45,6 +52,7 @@ if(WIN32)
         ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_win.cc
     )
 else()
+    message(STATUS "[rtc_base] Platform: POSIX - using posix rw_lock")
     list(APPEND WEBRTC_BASE_SOURCES
         ${WEBRTC_SRC_DIR}/rtc_base/synchronization/rw_lock_posix.cc
     )
@@ -135,38 +143,42 @@ if(WEBRTC_BUILD_WEBRTC_LOGGING)
         
     # macOS 系统需要编译 logging_mac.mm（Objective-C++）
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        message(STATUS "[rtc_base] Logging: macOS extra (logging_mac.mm)")
         list(APPEND WEBRTC_BASE_SOURCES
             ${WEBRTC_SRC_DIR}/rtc_base/logging_mac.mm
         )
     endif()
-     
-    message(STATUS "[libwebrtc] WebRTC logging modules added")
 else()
     message(STATUS "[libwebrtc] WebRTC logging modules disabled")
 endif(WEBRTC_BUILD_WEBRTC_LOGGING)
 
 if(WEBRTC_BUILD_WEBRTC_STUN)
-    message(STATUS "[libwebrtc] Adding WebRTC STUN modules...")
+    message(STATUS "[rtc_base] STUN: enabled - adding STUN sources")
     list(APPEND WEBRTC_BASE_SOURCES
          ${WEBRTC_SRC_DIR}/rtc_base/memory_stream.cc
          ${WEBRTC_SRC_DIR}/rtc_base/message_digest.cc
          ${WEBRTC_SRC_DIR}/rtc_base/openssl_digest.cc
+    )
+    if(ANDROID)
+        message(STATUS "[rtc_base] STUN: Android ifaddrs")
+        list(APPEND WEBRTC_BASE_SOURCES
+            ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_android.cc
         )
-        if(ANDROID)
-            list(APPEND WEBRTC_BASE_SOURCES
-                    ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_android.cc
-                )
-        endif()
-        if(APPLE)
-            list(APPEND WEBRTC_BASE_SOURCES
-                    ${WEBRTC_SRC_DIR}/rtc_base/mac_ifaddrs_converter.cc
-                )
-        elseif(UNIX OR LINUX)
-            list(APPEND WEBRTC_BASE_SOURCES
-                    ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_converter.cc
-                )
-        endif()
-endif(WEBRTC_BUILD_WEBRTC_STUN)
+    endif()
+    if(APPLE)
+        message(STATUS "[rtc_base] STUN: Apple ifaddrs converter")
+        list(APPEND WEBRTC_BASE_SOURCES
+            ${WEBRTC_SRC_DIR}/rtc_base/mac_ifaddrs_converter.cc
+        )
+    elseif(UNIX OR LINUX)
+        message(STATUS "[rtc_base] STUN: Unix/Linux ifaddrs converter")
+        list(APPEND WEBRTC_BASE_SOURCES
+            ${WEBRTC_SRC_DIR}/rtc_base/ifaddrs_converter.cc
+        )
+    endif()
+else()
+    message(STATUS "[rtc_base] STUN: disabled")
+endif()
 
 
 add_subdirectory(
@@ -194,10 +206,18 @@ target_include_directories(
 )
 
 if(WEBRTC_BUILD_WEBRTC_STUN)
-    # 使用 OpenSSL（替换 BoringSSL）
-    target_link_libraries(rtc_base PRIVATE 
-        OpenSSL::SSL
-        OpenSSL::Crypto
-    )
-    message(STATUS "[libwebrtc] rtc_base linked with OpenSSL")
+    if(TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
+        target_link_libraries(rtc_base PRIVATE 
+            OpenSSL::SSL
+            OpenSSL::Crypto
+        )
+        message(STATUS "[rtc_base] OpenSSL: linked (SSL + Crypto)")
+    else()
+        message(WARNING "[rtc_base] OpenSSL: targets not found! STUN may fail to link.")
+    endif()
 endif()
+
+# ==================== [rtc_base] 编译摘要 ====================
+list(LENGTH WEBRTC_BASE_SOURCES _total)
+message(STATUS "[rtc_base] Total source files: ${_total}")
+message(STATUS "[rtc_base] ====== End of rtc_base ======")
