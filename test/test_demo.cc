@@ -54,9 +54,13 @@
 #include "modules/rtp_rtcp/source/flexfec_header_reader_writer.h"
 #include "modules/rtp_rtcp/include/flexfec_sender.h"
 #include "modules/rtp_rtcp/source/ulpfec_generator.h"
+#include "modules/rtp_rtcp/source/rtp_format_h264.h"
 #include "modules/include/module_fec_types.h"
+#include "modules/include/module_common_types.h"
+#include "common_video/h264/h264_common.h"
 #include "rtc_base/copy_on_write_buffer.h"
 #include "rtc_base/ref_counted_object.h"
+#include "rtc_base/buffer.h"
 
 // ---- GCC ----
 #include "api/transport/goog_cc_factory.h"
@@ -501,9 +505,9 @@ bool test_flexfec_header() {
     return true;
 }
 
-static void fill_rtp_header(uint8_t* data, uint16_t seq, uint32_t ts, uint32_t ssrc, uint8_t pt) {
+static void fill_rtp_header(uint8_t* data, uint16_t seq, uint32_t ts, uint32_t ssrc, uint8_t pt, bool marker) {
     data[0] = 0x80;
-    data[1] = pt;
+    data[1] = pt | (marker ? 0x80 : 0x00);
     data[2] = (seq >> 8) & 0xff;
     data[3] = seq & 0xff;
     data[4] = (ts >> 24) & 0xff;
@@ -516,25 +520,121 @@ static void fill_rtp_header(uint8_t* data, uint16_t seq, uint32_t ts, uint32_t s
     data[11] = ssrc & 0xff;
 }
 
+static std::vector<uint8_t> build_h264_idr_frame() {
+    std::vector<uint8_t> frame;
+    auto append_start_code = [&](bool long_start) {
+        if (long_start) {
+            frame.push_back(0x00);
+            frame.push_back(0x00);
+            frame.push_back(0x00);
+            frame.push_back(0x01);
+        } else {
+            frame.push_back(0x00);
+            frame.push_back(0x00);
+            frame.push_back(0x01);
+        }
+    };
+
+    append_start_code(true);
+    uint8_t sps[] = {
+        0x67, 0x42, 0xc0, 0x29, 0xd9, 0x00, 0x78, 0x02,
+        0x27, 0xe5, 0x84, 0x00, 0x00, 0x03, 0x00, 0x04,
+        0x00, 0x00, 0x03, 0x00, 0xc2, 0x3c, 0x3c, 0x60
+    };
+    frame.insert(frame.end(), sps, sps + sizeof(sps));
+
+    append_start_code(false);
+    uint8_t pps[] = {
+        0x68, 0xce, 0x3c, 0x80
+    };
+    frame.insert(frame.end(), pps, pps + sizeof(pps));
+
+    append_start_code(false);
+    frame.push_back(0x65);
+    frame.push_back(0x88);
+    frame.push_back(0x84);
+    frame.push_back(0x00);
+    const int idr_payload_size = 800;
+    for (int i = 0; i < idr_payload_size; i++) {
+        frame.push_back(static_cast<uint8_t>((i * 7 + 13) & 0xff));
+    }
+
+    return frame;
+}
+
+static std::vector<rtc::CopyOnWriteBuffer> packetize_h264_to_rtp(
+    const std::vector<uint8_t>& h264_frame,
+    uint32_t ssrc,
+    uint32_t timestamp,
+    uint8_t payload_type,
+    uint16_t start_seq,
+    size_t max_payload_len) {
+    std::vector<rtc::CopyOnWriteBuffer> rtp_packets;
+
+    webrtc::RTPFragmentationHeader frag_header;
+    std::vector<webrtc::H264::NaluIndex> nalu_indices =
+        webrtc::H264::FindNaluIndices(h264_frame.data(), h264_frame.size());
+    frag_header.VerifyAndAllocateFragmentationHeader(nalu_indices.size());
+    for (size_t i = 0; i < nalu_indices.size(); i++) {
+        frag_header.fragmentationOffset[i] = nalu_indices[i].payload_start_offset;
+        frag_header.fragmentationLength[i] = nalu_indices[i].payload_size;
+    }
+
+    webrtc::RtpPacketizerH264::PayloadSizeLimits limits;
+    limits.max_payload_len = static_cast<int>(max_payload_len);
+    limits.first_packet_reduction_len = 0;
+    limits.last_packet_reduction_len = 0;
+    limits.single_packet_reduction_len = 0;
+
+    webrtc::RtpPacketizerH264 packetizer(
+        rtc::MakeArrayView(h264_frame.data(), h264_frame.size()),
+        limits,
+        webrtc::H264PacketizationMode::NonInterleaved,
+        frag_header);
+
+    size_t num_packets = packetizer.NumPackets();
+    uint16_t seq = start_seq;
+
+    webrtc::RtpPacketToSend rtp_packet(nullptr);
+    for (size_t i = 0; i < num_packets; i++) {
+        rtp_packet.SetPayloadType(payload_type);
+        rtp_packet.SetSequenceNumber(seq);
+        rtp_packet.SetTimestamp(timestamp);
+        rtp_packet.SetSsrc(ssrc);
+        bool marker = false;
+        bool ret = packetizer.NextPacket(&rtp_packet);
+        if (!ret) break;
+        if (i == num_packets - 1) {
+            rtp_packet.SetMarker(true);
+        }
+        rtc::CopyOnWriteBuffer buf(rtp_packet.data(), rtp_packet.size());
+        rtp_packets.push_back(buf);
+        seq++;
+    }
+
+    return rtp_packets;
+}
+
 bool test_ulpfec_encode_decode() {
     const uint32_t kSsrc = 12345;
-    const size_t kHeaderSize = 12;
-    const size_t kPayloadSize = 100;
-    const size_t kPacketSize = kHeaderSize + kPayloadSize;
-    const int kNumMediaPackets = 4;
+    const uint8_t kPt = 96;
+    const uint32_t kTimestamp = 10000;
+
+    std::vector<uint8_t> h264_frame = build_h264_idr_frame();
+    ASSERT_GT(h264_frame.size(), 0u, "h264 frame built");
+
+    std::vector<rtc::CopyOnWriteBuffer> rtp_packets = packetize_h264_to_rtp(
+        h264_frame, kSsrc, kTimestamp, kPt, 0, 500);
+    ASSERT_GE(rtp_packets.size(), 3u, "at least 3 rtp packets");
+    size_t num_media = rtp_packets.size();
 
     auto fec = webrtc::ForwardErrorCorrection::CreateUlpfec(kSsrc);
     ASSERT_TRUE(fec != nullptr, "create ulpfec");
 
     webrtc::ForwardErrorCorrection::PacketList media_packets;
-    for (int i = 0; i < kNumMediaPackets; i++) {
+    for (const auto& pkt_buf : rtp_packets) {
         auto pkt = std::make_unique<webrtc::ForwardErrorCorrection::Packet>();
-        pkt->data.SetSize(kPacketSize);
-        uint8_t* data = pkt->data.data();
-        fill_rtp_header(data, static_cast<uint16_t>(i), 1000 + i * 33, kSsrc, 96);
-        for (size_t j = 0; j < kPayloadSize; j++) {
-            data[kHeaderSize + j] = static_cast<uint8_t>(i * 10 + j);
-        }
+        pkt->data = pkt_buf;
         media_packets.push_back(std::move(pkt));
     }
 
@@ -546,15 +646,16 @@ bool test_ulpfec_encode_decode() {
     webrtc::ForwardErrorCorrection::RecoveredPacketList recovered;
     fec->ResetState(&recovered);
 
-    for (int i = 0; i < kNumMediaPackets; i++) {
-        if (i == 1) continue;
+    size_t drop_idx = 1;
+    for (size_t i = 0; i < num_media; i++) {
+        if (i == drop_idx) continue;
         auto rp = std::make_unique<webrtc::ForwardErrorCorrection::ReceivedPacket>();
         rp->ssrc = kSsrc;
-        rp->seq_num = static_cast<uint16_t>(i);
+        rp->seq_num = webrtc::ForwardErrorCorrection::ParseSequenceNumber(
+            const_cast<uint8_t*>(rtp_packets[i].data()));
         rp->is_fec = false;
         rp->pkt = new rtc::RefCountedObject<webrtc::ForwardErrorCorrection::Packet>();
-        rp->pkt->data = media_packets.front()->data;
-        media_packets.pop_front();
+        rp->pkt->data = rtp_packets[i];
         fec->DecodeFec(*rp, &recovered);
     }
 
@@ -573,7 +674,7 @@ bool test_ulpfec_encode_decode() {
         if (rp->was_recovered) recovered_count++;
     }
     ASSERT_GE(recovered_count, 1, "recovered at least 1 packet");
-    ASSERT_EQ(recovered.size(), static_cast<size_t>(kNumMediaPackets), "all media packets present");
+    ASSERT_EQ(recovered.size(), num_media, "all media packets present");
 
     TEST_PASS("test_ulpfec_encode_decode");
     return true;
@@ -582,23 +683,24 @@ bool test_ulpfec_encode_decode() {
 bool test_flexfec_encode_decode() {
     const uint32_t kFecSsrc = 54321;
     const uint32_t kMediaSsrc = 12345;
-    const size_t kHeaderSize = 12;
-    const size_t kPayloadSize = 100;
-    const size_t kPacketSize = kHeaderSize + kPayloadSize;
-    const int kNumMediaPackets = 4;
+    const uint8_t kPt = 96;
+    const uint32_t kTimestamp = 20000;
+
+    std::vector<uint8_t> h264_frame = build_h264_idr_frame();
+    ASSERT_GT(h264_frame.size(), 0u, "h264 frame built");
+
+    std::vector<rtc::CopyOnWriteBuffer> rtp_packets = packetize_h264_to_rtp(
+        h264_frame, kMediaSsrc, kTimestamp, kPt, 100, 500);
+    ASSERT_GE(rtp_packets.size(), 3u, "at least 3 rtp packets");
+    size_t num_media = rtp_packets.size();
 
     auto fec = webrtc::ForwardErrorCorrection::CreateFlexfec(kFecSsrc, kMediaSsrc);
     ASSERT_TRUE(fec != nullptr, "create flexfec");
 
     webrtc::ForwardErrorCorrection::PacketList media_packets;
-    for (int i = 0; i < kNumMediaPackets; i++) {
+    for (const auto& pkt_buf : rtp_packets) {
         auto pkt = std::make_unique<webrtc::ForwardErrorCorrection::Packet>();
-        pkt->data.SetSize(kPacketSize);
-        uint8_t* data = pkt->data.data();
-        fill_rtp_header(data, static_cast<uint16_t>(i), 2000 + i * 33, kMediaSsrc, 96);
-        for (size_t j = 0; j < kPayloadSize; j++) {
-            data[kHeaderSize + j] = static_cast<uint8_t>(i * 20 + j);
-        }
+        pkt->data = pkt_buf;
         media_packets.push_back(std::move(pkt));
     }
 
@@ -610,15 +712,16 @@ bool test_flexfec_encode_decode() {
     webrtc::ForwardErrorCorrection::RecoveredPacketList recovered;
     fec->ResetState(&recovered);
 
-    int idx = 0;
-    for (auto it = media_packets.begin(); it != media_packets.end(); ++it, ++idx) {
-        if (idx == 2) continue;
+    size_t drop_idx = 2;
+    for (size_t i = 0; i < num_media; i++) {
+        if (i == drop_idx) continue;
         auto rp = std::make_unique<webrtc::ForwardErrorCorrection::ReceivedPacket>();
         rp->ssrc = kMediaSsrc;
-        rp->seq_num = static_cast<uint16_t>(idx);
+        rp->seq_num = webrtc::ForwardErrorCorrection::ParseSequenceNumber(
+            const_cast<uint8_t*>(rtp_packets[i].data()));
         rp->is_fec = false;
         rp->pkt = new rtc::RefCountedObject<webrtc::ForwardErrorCorrection::Packet>();
-        rp->pkt->data = (*it)->data;
+        rp->pkt->data = rtp_packets[i];
         fec->DecodeFec(*rp, &recovered);
     }
 
